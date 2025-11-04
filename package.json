@@ -1,0 +1,26 @@
+{
+  "name": "bakery-planning-system",
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Inteligentny system planowania wypieków dla piekarni",
+  "private": true,
+  "dependencies": {
+    "lodash": "^4.17.21",
+    "lucide-react": "^0.294.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.2.0",
+    "vite": "^7.1.12",
+    "tailwindcss": "^3.4.0",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}
