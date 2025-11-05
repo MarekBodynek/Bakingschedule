@@ -1,0 +1,6 @@
+{
+  "buildCommand": "cd Bakingschedule && npm run build",
+  "outputDirectory": "Bakingschedule/dist",
+  "installCommand": "cd Bakingschedule && npm install",
+  "framework": null
+}
