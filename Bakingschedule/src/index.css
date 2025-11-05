@@ -24,10 +24,91 @@ code {
 
   body {
     background: white;
+    color: black;
   }
 
   @page {
     size: landscape;
     margin: 1cm;
+  }
+
+  /* Ukryj przyciski i elementy interfejsu */
+  button,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Optymalizacja tabel i kart dla druku */
+  .space-y-4 {
+    page-break-inside: avoid;
+  }
+
+  /* Zwiększ kontrast dla czytelności */
+  .bg-gray-50,
+  .bg-gray-100,
+  .bg-blue-50,
+  .bg-purple-50,
+  .bg-green-50 {
+    background-color: white !important;
+  }
+
+  /* Pogrub ramki */
+  .border,
+  .border-2 {
+    border-color: black !important;
+    border-width: 1px !important;
+  }
+
+  .border-t {
+    border-top-color: black !important;
+  }
+
+  .border-b {
+    border-bottom-color: black !important;
+  }
+
+  /* Tekst na czarno */
+  .text-gray-600,
+  .text-gray-700,
+  .text-gray-800,
+  .text-blue-600,
+  .text-purple-600 {
+    color: black !important;
+  }
+
+  /* Zachowaj ważne wyróżnienia */
+  .font-bold {
+    font-weight: bold !important;
+  }
+
+  /* Optymalizacja przełamywania stron */
+  .rounded-lg {
+    page-break-inside: avoid;
+  }
+
+  /* Zmniejsz marginesy dla większej zawartości */
+  .space-y-4 > * {
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Tło dla numerów rund */
+  .bg-green-600,
+  .bg-blue-600,
+  .bg-orange-600 {
+    background-color: #333 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Zachowaj kolory dla ważnych elementów */
+  .bg-yellow-100 {
+    background-color: #fef3c7 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .text-yellow-800 {
+    color: #92400e !important;
   }
 }
