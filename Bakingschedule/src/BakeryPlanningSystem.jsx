@@ -1196,7 +1196,7 @@ const BakeryPlanningSystem = () => {
       <div className="bg-white rounded-lg shadow-lg p-6 mb-4 no-print">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">🥐 Načrtovanje peke - Šentjur</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">🥐 Načrtovanje peke</h1>
             <div className="flex items-center gap-2 flex-wrap">
               <p className="text-gray-600 text-sm">{products.length} izdelkov</p>
               
@@ -1496,6 +1496,11 @@ const BakeryPlanningSystem = () => {
 
                   const dailyTotal = plan1.quantity + plan2.quantity + plan3.quantity;
                   const dailyHistorical = plan1.historical + plan2.historical + plan3.historical;
+
+                  // Ukryj produkty z zerową ilością
+                  if (dailyTotal === 0) {
+                    return null;
+                  }
 
                   // Sprawdź czy produkt został ręcznie skorygowany
                   const manualCorrectionTypes = ['weather', 'event', 'school', 'competitor', 'promotion', 'delivery', 'staff', 'intuition', 'other'];
