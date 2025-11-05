@@ -1175,9 +1175,7 @@ const BakeryPlanningSystem = () => {
             padding: 20px;
           }
           .print-header {
-            display: block !important;
-            text-align: center;
-            margin-bottom: 20px;
+            display: none !important;
           }
           table {
             page-break-inside: auto;
