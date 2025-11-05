@@ -171,20 +171,20 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
         <div className="flex items-center justify-between">
           <div className="flex-1">
             <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-              <ChefHat className="w-5 h-5" />
+              <ChefHat className="w-5 h-5 print:hidden" />
               Plan pečenja - {waveNames[waveNumber]}
             </h3>
-            <p className="text-sm text-gray-600 mt-1">
+            <p className="text-sm text-gray-600 mt-1 print:hidden">
               Izdelki so razporejeni po prioriteti - najpopularnejši najprej
             </p>
             {ovenSettings.individualCapacities && (
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 mt-1 print:hidden">
                 Pečice: {ovenSettings.individualCapacities.map((cap, idx) => `${idx + 1}. (${cap})`).join(' • ')} = {ovenSettings.ovenCapacity} pladnjev skupaj
               </p>
             )}
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-right space-y-1">
+            <div className="text-right space-y-1 print:hidden">
               <div>
                 <div className="text-sm text-gray-600">Runde pečenja</div>
                 <div className="text-2xl font-bold text-purple-600">{batches.length}</div>
@@ -210,8 +210,45 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
         </div>
       </div>
 
-      {/* Batches */}
-      <div className="space-y-4">
+      {/* Prosta tabela do druku - tylko widoczna podczas drukowania */}
+      <div className="hidden print:block">
+        {batches.map((batch, batchIdx) => (
+          <div key={batchIdx} className="mb-8" style={{ pageBreakInside: 'avoid' }}>
+            <h4 className="text-lg font-bold mb-2 border-b-2 border-black pb-1">
+              Runda {batch.batchNumber} - {batch.programName} ({batch.bakingTime} min)
+            </h4>
+            <table className="w-full border-collapse border-2 border-black">
+              <thead>
+                <tr className="bg-gray-200">
+                  <th className="border border-black px-3 py-2 text-left font-bold">Taca</th>
+                  <th className="border border-black px-3 py-2 text-left font-bold">Produkt</th>
+                  <th className="border border-black px-3 py-2 text-left font-bold">EAN</th>
+                  <th className="border border-black px-3 py-2 text-right font-bold">Količina</th>
+                </tr>
+              </thead>
+              <tbody>
+                {batch.trays.map((tray) => (
+                  <tr key={tray.id}>
+                    <td className="border border-black px-3 py-2 font-bold">{tray.id}</td>
+                    <td className="border border-black px-3 py-2">{tray.product.name}</td>
+                    <td className="border border-black px-3 py-2 text-sm">{tray.product.sku}</td>
+                    <td className="border border-black px-3 py-2 text-right font-bold">{tray.quantity}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-gray-100 font-bold">
+                  <td colSpan="3" className="border border-black px-3 py-2">SKUPAJ</td>
+                  <td className="border border-black px-3 py-2 text-right">{batch.totalPieces} kosov</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ))}
+      </div>
+
+      {/* Batches - widoczne tylko na ekranie */}
+      <div className="space-y-4 print:hidden">
         {batches.map((batch, batchIdx) => (
           <div
             key={batchIdx}

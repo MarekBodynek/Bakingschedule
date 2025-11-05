@@ -111,4 +111,32 @@ code {
   .text-yellow-800 {
     color: #92400e !important;
   }
+
+  /* Tabele do druku - czarno-białe */
+  table {
+    border-collapse: collapse !important;
+  }
+
+  table th,
+  table td {
+    border: 1px solid black !important;
+    padding: 8px !important;
+  }
+
+  table thead tr,
+  table tfoot tr {
+    background-color: #f0f0f0 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Ukryj graficzne elementy podczas druku */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Pokaż tabele podczas druku */
+  .print\:block {
+    display: block !important;
+  }
 }
