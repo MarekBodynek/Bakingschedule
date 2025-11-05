@@ -27,6 +27,7 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
   const [uploadStatus, setUploadStatus] = useState('');
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
+  const [showAllProducts, setShowAllProducts] = useState(false);
 
   // Wczytaj zapisaną konfigurację
   useEffect(() => {
@@ -486,7 +487,19 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
           {/* Product Preview */}
           {productConfig.length > 0 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800">4. Pregled izdelkov (prvih 10)</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  4. Pregled izdelkov {!showAllProducts && `(prvih 10)`}
+                </h3>
+                {productConfig.length > 10 && (
+                  <button
+                    onClick={() => setShowAllProducts(!showAllProducts)}
+                    className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition-colors"
+                  >
+                    {showAllProducts ? 'Pokaži manj' : `Pokaži vse (${productConfig.length})`}
+                  </button>
+                )}
+              </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -499,8 +512,8 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {productConfig.slice(0, 10).map((product, idx) => (
-                      <tr key={idx} className="border-b">
+                    {(showAllProducts ? productConfig : productConfig.slice(0, 10)).map((product, idx) => (
+                      <tr key={idx} className="border-b hover:bg-gray-50">
                         <td className="px-4 py-2 font-mono text-xs">{product.sku}</td>
                         <td className="px-4 py-2">{product.name}</td>
                         <td className="px-4 py-2 text-center">
@@ -513,7 +526,7 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
                     ))}
                   </tbody>
                 </table>
-                {productConfig.length > 10 && (
+                {!showAllProducts && productConfig.length > 10 && (
                   <p className="text-sm text-gray-500 mt-2 text-center">
                     ... in še {productConfig.length - 10} izdelkov
                   </p>
