@@ -1604,12 +1604,12 @@ const BakeryPlanningSystem = () => {
 
           {/* Trays View */}
           {activeTab === 'trays' && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Optimizacija pladenj - {selectedDate}</h2>
+            <div className="space-y-6 print:space-y-0">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4 print:hidden">Optimizacija pladenj - {selectedDate}</h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4">
-                  <h3 className="text-lg font-bold text-green-800 mb-2">Val 1 (7-12)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:block print:space-y-0">
+                <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 print:bg-white print:border-0 print:p-0" data-wave-container="1">
+                  <h3 className="text-lg font-bold text-green-800 mb-2 print:hidden">Val 1 (7-12)</h3>
                   <TrayOptimizationView
                     products={products}
                     wavePlan={plans[1]}
@@ -1617,8 +1617,8 @@ const BakeryPlanningSystem = () => {
                   />
                 </div>
 
-                <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4">
-                  <h3 className="text-lg font-bold text-blue-800 mb-2">Val 2 (12-16)</h3>
+                <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 print:bg-white print:border-0 print:p-0" data-wave-container="2">
+                  <h3 className="text-lg font-bold text-blue-800 mb-2 print:hidden">Val 2 (12-16)</h3>
                   <TrayOptimizationView
                     products={products}
                     wavePlan={plans[2]}
@@ -1626,8 +1626,8 @@ const BakeryPlanningSystem = () => {
                   />
                 </div>
 
-                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4">
-                  <h3 className="text-lg font-bold text-orange-800 mb-2">Val 3 (16-20)</h3>
+                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 print:bg-white print:border-0 print:p-0" data-wave-container="3">
+                  <h3 className="text-lg font-bold text-orange-800 mb-2 print:hidden">Val 3 (16-20)</h3>
                   <TrayOptimizationView
                     products={products}
                     wavePlan={plans[3]}

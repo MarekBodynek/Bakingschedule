@@ -140,13 +140,33 @@ code {
     display: block !important;
   }
 
-  /* Ukryj inne fale podczas drukowania */
-  body[data-printing-wave="1"] [data-wave="2"],
-  body[data-printing-wave="1"] [data-wave="3"],
-  body[data-printing-wave="2"] [data-wave="1"],
-  body[data-printing-wave="2"] [data-wave="3"],
-  body[data-printing-wave="3"] [data-wave="1"],
-  body[data-printing-wave="3"] [data-wave="2"] {
+  /* Ukryj inne fale podczas drukowania - ukryj całe kontenery */
+  body[data-printing-wave="1"] [data-wave-container="2"],
+  body[data-printing-wave="1"] [data-wave-container="3"],
+  body[data-printing-wave="2"] [data-wave-container="1"],
+  body[data-printing-wave="2"] [data-wave-container="3"],
+  body[data-printing-wave="3"] [data-wave-container="1"],
+  body[data-printing-wave="3"] [data-wave-container="2"] {
     display: none !important;
+  }
+
+  /* Optymalizuj wykorzystanie papieru */
+  @page {
+    margin: 0.5cm !important;
+  }
+
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Ukryj nagłówek strony podczas druku */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Zmniejsz odstępy w tabelach */
+  .mb-8 {
+    margin-bottom: 1rem !important;
   }
 }
