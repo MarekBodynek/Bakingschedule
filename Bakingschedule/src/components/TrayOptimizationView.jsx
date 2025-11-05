@@ -174,6 +174,14 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
   const { batches, totalTrays, totalTime } = trayAllocation;
   const totalPieces = batches.reduce((sum, batch) => sum + batch.totalPieces, 0);
 
+  // Zbierz wszystkie tace w jedną listę sekwencyjną
+  const allTrays = [];
+  batches.forEach(batch => {
+    batch.trays.forEach(tray => {
+      allTrays.push(tray);
+    });
+  });
+
   return (
     <div className="space-y-4" data-wave={waveNumber}>
       {/* Header */}
@@ -222,135 +230,83 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
 
       {/* Prosta tabela do druku - tylko widoczna podczas drukowania */}
       <div className="hidden print:block">
-        {batches.map((batch, batchIdx) => (
-          <div key={batchIdx} className="mb-8" style={{ pageBreakInside: 'avoid' }}>
-            <h4 className="text-lg font-bold mb-2 border-b-2 border-black pb-1">
-              Runda {batch.batchNumber} - {batch.programName} ({batch.bakingTime} min)
-            </h4>
-            <table className="w-full border-collapse border-2 border-black">
-              <thead>
-                <tr className="bg-gray-200">
-                  <th className="border border-black px-3 py-2 text-left font-bold">Taca</th>
-                  <th className="border border-black px-3 py-2 text-left font-bold">Produkt</th>
-                  <th className="border border-black px-3 py-2 text-left font-bold">EAN</th>
-                  <th className="border border-black px-3 py-2 text-right font-bold">Količina</th>
-                </tr>
-              </thead>
-              <tbody>
-                {batch.trays.map((tray) => (
-                  <tr key={tray.id}>
-                    <td className="border border-black px-3 py-2 font-bold">{tray.id}</td>
-                    <td className="border border-black px-3 py-2">{tray.product.name}</td>
-                    <td className="border border-black px-3 py-2 text-sm">{tray.product.sku}</td>
-                    <td className="border border-black px-3 py-2 text-right font-bold">{tray.quantity}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-gray-100 font-bold">
-                  <td colSpan="3" className="border border-black px-3 py-2">SKUPAJ</td>
-                  <td className="border border-black px-3 py-2 text-right">{batch.totalPieces} kosov</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        ))}
+        <table className="w-full border-collapse border-2 border-black">
+          <thead>
+            <tr className="bg-gray-200">
+              <th className="border border-black px-3 py-2 text-left font-bold">Taca</th>
+              <th className="border border-black px-3 py-2 text-left font-bold">Produkt</th>
+              <th className="border border-black px-3 py-2 text-left font-bold">EAN</th>
+              <th className="border border-black px-3 py-2 text-left font-bold">Program</th>
+              <th className="border border-black px-3 py-2 text-right font-bold">Količina</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allTrays.map((tray) => (
+              <tr key={tray.id}>
+                <td className="border border-black px-3 py-2 font-bold">{tray.id}</td>
+                <td className="border border-black px-3 py-2">{tray.product.name}</td>
+                <td className="border border-black px-3 py-2 text-sm">{tray.product.sku}</td>
+                <td className="border border-black px-3 py-2 text-sm">{tray.programName}</td>
+                <td className="border border-black px-3 py-2 text-right font-bold">{tray.quantity}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr className="bg-gray-100 font-bold">
+              <td colSpan="4" className="border border-black px-3 py-2">SKUPAJ</td>
+              <td className="border border-black px-3 py-2 text-right">{totalPieces} kosov</td>
+            </tr>
+          </tfoot>
+        </table>
       </div>
 
-      {/* Batches - widoczne tylko na ekranie */}
-      <div className="space-y-4 print:hidden">
-        {batches.map((batch, batchIdx) => (
-          <div
-            key={batchIdx}
-            className={`bg-white border-2 border-${color}-200 rounded-lg overflow-hidden shadow-sm`}
-          >
-            {/* Batch Header */}
-            <div className={`bg-${color}-50 border-b-2 border-${color}-200 p-4`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-full bg-${color}-600 text-white flex items-center justify-center font-bold text-xl`}>
-                    {batch.batchNumber}
-                  </div>
-                  <div>
-                    <div className="font-bold text-gray-800 text-lg">
-                      Runda {batch.batchNumber} - {batch.programName}
+      {/* Sequential trays view - widoczne tylko na ekranie */}
+      <div className="print:hidden">
+        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-gray-100 border-b-2 border-gray-300">
+              <tr>
+                <th className="px-4 py-3 text-left font-bold text-gray-700">Taca</th>
+                <th className="px-4 py-3 text-left font-bold text-gray-700">Produkt</th>
+                <th className="px-4 py-3 text-left font-bold text-gray-700">EAN</th>
+                <th className="px-4 py-3 text-left font-bold text-gray-700">Program</th>
+                <th className="px-4 py-3 text-right font-bold text-gray-700">Količina</th>
+              </tr>
+            </thead>
+            <tbody>
+              {allTrays.map((tray, index) => (
+                <tr
+                  key={tray.id}
+                  className={`border-b border-gray-200 hover:bg-blue-50 transition-colors ${
+                    tray.product.isKey ? 'bg-yellow-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                  }`}
+                >
+                  <td className="px-4 py-3">
+                    <div className="w-10 h-10 rounded bg-blue-600 text-white flex items-center justify-center font-bold">
+                      {tray.id}
                     </div>
-                    <div className="text-sm text-gray-600 flex items-center gap-3">
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {batch.startTime}-{batch.endTime} min
-                      </span>
-                      <span>•</span>
-                      <span>{batch.trayCount} pladnjev</span>
-                      <span>•</span>
-                      <span className="font-semibold">{batch.totalPieces} kosov</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="font-semibold text-gray-800">
+                      {tray.product.name}
+                      {tray.product.isKey && (
+                        <span className="ml-2 px-2 py-0.5 bg-yellow-200 text-yellow-800 rounded text-xs font-bold">
+                          ★ KLJUČNO
+                        </span>
+                      )}
                     </div>
-                  </div>
-                </div>
-                <div className={`px-4 py-2 bg-${color}-100 text-${color}-900 rounded-full text-sm font-bold`}>
-                  Program {batch.program}
-                  <div className="text-xs font-normal">{batch.bakingTime} min</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Trays in this batch */}
-            <div className="p-4">
-              <div className="space-y-3">
-                {batch.trays.map((tray, trayIdx) => (
-                  <div
-                    key={tray.id}
-                    className="border-2 border-gray-200 rounded-lg p-4 bg-gray-50 hover:bg-gray-100 hover:border-blue-300 transition-all"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="flex-shrink-0">
-                        <div className="w-12 h-12 rounded bg-blue-600 text-white flex items-center justify-center font-bold text-lg">
-                          {tray.id}
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-800 text-base">
-                          {tray.product.name}
-                        </div>
-                        <div className="text-sm text-gray-500 mt-1">
-                          EAN: {tray.product.sku}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <div className="text-3xl font-bold text-blue-600">
-                            {tray.quantity}
-                          </div>
-                          <div className="text-sm text-gray-600 font-medium">
-                            kosov
-                          </div>
-                        </div>
-                        {tray.product.isKey && (
-                          <div className="flex-shrink-0">
-                            <span className="px-3 py-1.5 bg-yellow-100 text-yellow-800 rounded font-bold text-sm">
-                              ★ KLJUČNO
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Batch Footer */}
-            <div className={`bg-gray-100 border-t border-gray-200 px-4 py-2 flex items-center justify-between text-sm`}>
-              <div className="text-gray-600">
-                <span className="font-semibold">Naložite {batch.trayCount} pladnjev v pečico</span>
-              </div>
-              <div className="flex items-center gap-2 text-gray-700">
-                <TrendingUp className="w-4 h-4" />
-                <span className="font-semibold">Skupaj: {batch.totalPieces} kosov</span>
-              </div>
-            </div>
-          </div>
-        ))}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{tray.product.sku}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">{tray.programName}</td>
+                  <td className="px-4 py-3 text-right">
+                    <span className="text-2xl font-bold text-blue-600">{tray.quantity}</span>
+                    <span className="text-sm text-gray-600 ml-1">kos</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {/* Summary */}
