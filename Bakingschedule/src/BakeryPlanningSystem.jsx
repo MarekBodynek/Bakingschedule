@@ -1605,7 +1605,7 @@ const BakeryPlanningSystem = () => {
             <div className="space-y-6 print:space-y-0">
               <h2 className="text-2xl font-bold text-gray-800 mb-4 print:hidden">Optimizacija pladenj - {selectedDate}</h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print:block print:space-y-0">
+              <div className="space-y-4 print:space-y-0">
                 <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 print:bg-white print:border-0 print:p-0" data-wave-container="1">
                   <h3 className="text-lg font-bold text-green-800 mb-2 print:hidden">Val 1 (7-12)</h3>
                   <TrayOptimizationView
