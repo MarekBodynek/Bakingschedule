@@ -1369,7 +1369,7 @@ const BakeryPlanningSystem = () => {
       {plans[1] && plans[2] && plans[3] && (
         <div id="print-area" className="bg-white rounded-lg shadow-lg p-6">
           <div className="print-header hidden">
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">🥐 Načrt proizvodnje peke - Šentjur</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">🥐 Načrtovanje peke</h1>
             <p className="text-lg text-gray-600 mb-1">Datum: <strong>{selectedDate}</strong></p>
             <p className="text-sm text-gray-500 mb-1">Generirano: {new Date().toLocaleString()}</p>
             <p className="text-base text-gray-700">Dnevno Skupaj: <strong className="text-green-600">{getDailyTotalPlanned()} kos</strong> (Zgodovinsko: {getDailyTotalHistorical()} kos)</p>
