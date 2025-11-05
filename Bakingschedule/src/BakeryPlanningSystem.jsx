@@ -60,7 +60,7 @@ const BakeryPlanningSystem = () => {
   const [activeTab, setActiveTab] = useState('plan'); // 'plan', 'trays', 'metrics'
   const [showBuffers, setShowBuffers] = useState(false); // Pokaži/skrij bufferje - domyślnie ukryte
   const [showOvenConfig, setShowOvenConfig] = useState(false); // Modal konfiguracji pieców
-  const [expandedWaves, setExpandedWaves] = useState({ 1: true, 2: true, 3: true }); // Rozwinięcie fal
+  const [expandedWaves, setExpandedWaves] = useState({ 1: false, 2: false, 3: false }); // Rozwinięcie fal - domyślnie zwinięte
 
   const previousDateRef = useRef(selectedDate);
 
