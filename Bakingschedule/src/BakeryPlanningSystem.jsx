@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, AlertCircle, CheckCircle, RefreshCw, Upload, Edit3, Package, TrendingUp } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, CheckCircle, RefreshCw, Upload, Edit3, Package, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
 import _ from 'lodash';
 import * as XLSX from 'xlsx';
 
@@ -60,6 +60,7 @@ const BakeryPlanningSystem = () => {
   const [activeTab, setActiveTab] = useState('plan'); // 'plan', 'trays', 'metrics'
   const [showBuffers, setShowBuffers] = useState(false); // Pokaži/skrij bufferje - domyślnie ukryte
   const [showOvenConfig, setShowOvenConfig] = useState(false); // Modal konfiguracji pieców
+  const [expandedWaves, setExpandedWaves] = useState({ 1: true, 2: true, 3: true }); // Rozwinięcie fal
 
   const previousDateRef = useRef(selectedDate);
 
@@ -106,6 +107,13 @@ const BakeryPlanningSystem = () => {
     setTimeout(() => {
       setSelectedDate(previousDateRef.current);
     }, 0);
+  };
+
+  const toggleWave = (waveNumber) => {
+    setExpandedWaves(prev => ({
+      ...prev,
+      [waveNumber]: !prev[waveNumber]
+    }));
   };
 
   const calculateEaster = (year) => {
@@ -1606,31 +1614,46 @@ const BakeryPlanningSystem = () => {
               <h2 className="text-2xl font-bold text-gray-800 mb-4 print:hidden">Optimizacija pladenj - {selectedDate}</h2>
 
               <div className="space-y-4 print:space-y-0">
-                <div className="bg-green-50 border-2 border-green-300 rounded-lg p-4 print:bg-white print:border-0 print:p-0" data-wave-container="1">
-                  <h3 className="text-lg font-bold text-green-800 mb-2 print:hidden">Val 1 (7-12)</h3>
-                  <TrayOptimizationView
-                    products={products}
-                    wavePlan={plans[1]}
-                    waveNumber={1}
-                  />
+                <div className="bg-green-50 border-2 border-green-300 rounded-lg print:bg-white print:border-0 print:p-0" data-wave-container="1">
+                  <div className="flex items-center justify-between p-4 print:hidden cursor-pointer hover:bg-green-100 transition-colors" onClick={() => toggleWave(1)}>
+                    <h3 className="text-lg font-bold text-green-800">Val 1 (7-12)</h3>
+                    {expandedWaves[1] ? <ChevronUp className="w-6 h-6 text-green-800" /> : <ChevronDown className="w-6 h-6 text-green-800" />}
+                  </div>
+                  <div className={expandedWaves[1] ? "px-4 pb-4 print:block print:p-0" : "hidden print:block print:p-0"}>
+                    <TrayOptimizationView
+                      products={products}
+                      wavePlan={plans[1]}
+                      waveNumber={1}
+                    />
+                  </div>
                 </div>
 
-                <div className="bg-blue-50 border-2 border-blue-300 rounded-lg p-4 print:bg-white print:border-0 print:p-0" data-wave-container="2">
-                  <h3 className="text-lg font-bold text-blue-800 mb-2 print:hidden">Val 2 (12-16)</h3>
-                  <TrayOptimizationView
-                    products={products}
-                    wavePlan={plans[2]}
-                    waveNumber={2}
-                  />
+                <div className="bg-blue-50 border-2 border-blue-300 rounded-lg print:bg-white print:border-0 print:p-0" data-wave-container="2">
+                  <div className="flex items-center justify-between p-4 print:hidden cursor-pointer hover:bg-blue-100 transition-colors" onClick={() => toggleWave(2)}>
+                    <h3 className="text-lg font-bold text-blue-800">Val 2 (12-16)</h3>
+                    {expandedWaves[2] ? <ChevronUp className="w-6 h-6 text-blue-800" /> : <ChevronDown className="w-6 h-6 text-blue-800" />}
+                  </div>
+                  <div className={expandedWaves[2] ? "px-4 pb-4 print:block print:p-0" : "hidden print:block print:p-0"}>
+                    <TrayOptimizationView
+                      products={products}
+                      wavePlan={plans[2]}
+                      waveNumber={2}
+                    />
+                  </div>
                 </div>
 
-                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg p-4 print:bg-white print:border-0 print:p-0" data-wave-container="3">
-                  <h3 className="text-lg font-bold text-orange-800 mb-2 print:hidden">Val 3 (16-20)</h3>
-                  <TrayOptimizationView
-                    products={products}
-                    wavePlan={plans[3]}
-                    waveNumber={3}
-                  />
+                <div className="bg-orange-50 border-2 border-orange-300 rounded-lg print:bg-white print:border-0 print:p-0" data-wave-container="3">
+                  <div className="flex items-center justify-between p-4 print:hidden cursor-pointer hover:bg-orange-100 transition-colors" onClick={() => toggleWave(3)}>
+                    <h3 className="text-lg font-bold text-orange-800">Val 3 (16-20)</h3>
+                    {expandedWaves[3] ? <ChevronUp className="w-6 h-6 text-orange-800" /> : <ChevronDown className="w-6 h-6 text-orange-800" />}
+                  </div>
+                  <div className={expandedWaves[3] ? "px-4 pb-4 print:block print:p-0" : "hidden print:block print:p-0"}>
+                    <TrayOptimizationView
+                      products={products}
+                      wavePlan={plans[3]}
+                      waveNumber={3}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
