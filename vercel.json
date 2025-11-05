@@ -3,5 +3,6 @@
   "outputDirectory": "Bakingschedule/dist",
   "installCommand": "echo 'No install needed'",
   "framework": null,
-  "devCommand": "cd Bakingschedule && npm run dev"
+  "devCommand": "cd Bakingschedule && npm run dev",
+  "public": true
 }
