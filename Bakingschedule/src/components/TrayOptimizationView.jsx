@@ -142,9 +142,19 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
     };
   }, [products, wavePlan, ovenConfig, programConfig, ovenSettings]);
 
-  // Funkcja drukowania
+  // Funkcja drukowania - ukrywa inne fale
   const handlePrint = () => {
+    // Dodaj klasę do body wskazującą którą falę drukujemy
+    document.body.setAttribute('data-printing-wave', waveNumber);
+
+    // Drukuj
     window.print();
+
+    // Po zamknięciu okna drukowania, usuń klasę
+    // (setTimeout bo window.print() blokuje wykonanie)
+    setTimeout(() => {
+      document.body.removeAttribute('data-printing-wave');
+    }, 100);
   };
 
   if (trayAllocation.batches.length === 0) {
@@ -165,7 +175,7 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
   const totalPieces = batches.reduce((sum, batch) => sum + batch.totalPieces, 0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-wave={waveNumber}>
       {/* Header */}
       <div className="bg-white border border-gray-200 rounded-lg p-4 print:border-black">
         <div className="flex items-center justify-between">

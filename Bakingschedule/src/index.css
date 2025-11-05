@@ -139,4 +139,14 @@ code {
   .print\:block {
     display: block !important;
   }
+
+  /* Ukryj inne fale podczas drukowania */
+  body[data-printing-wave="1"] [data-wave="2"],
+  body[data-printing-wave="1"] [data-wave="3"],
+  body[data-printing-wave="2"] [data-wave="1"],
+  body[data-printing-wave="2"] [data-wave="3"],
+  body[data-printing-wave="3"] [data-wave="1"],
+  body[data-printing-wave="3"] [data-wave="2"] {
+    display: none !important;
+  }
 }
