@@ -20,7 +20,7 @@ export const translations = {
 
     // Przyciski główne
     manageFiles: 'Zarządzaj plikami',
-    ovenConfig: '⚙️ Konfiguracja piecy',
+    ovenConfig: '⚙️ Konfiguracja',
     reset: '🔄 Reset',
     installApp: '📱 Zainstaluj lokalnie',
 
@@ -135,7 +135,7 @@ export const translations = {
 
     // Main buttons
     manageFiles: 'Manage files',
-    ovenConfig: '⚙️ Oven Configuration',
+    ovenConfig: '⚙️ Configuration',
     reset: '🔄 Reset',
     installApp: '📱 Install Locally',
 
@@ -250,7 +250,7 @@ export const translations = {
 
     // Glavni gumbi
     manageFiles: 'Upravljaj datotekama',
-    ovenConfig: '⚙️ Konfiguracija pećnice',
+    ovenConfig: '⚙️ Konfiguracija',
     reset: '🔄 Resetiraj',
     installApp: '📱 Instaliraj lokalno',
 
@@ -365,7 +365,7 @@ export const translations = {
 
     // Glavni gumbi
     manageFiles: 'Upravljaj datoteke',
-    ovenConfig: '⚙️ Konfiguracija pečice',
+    ovenConfig: '⚙️ Konfiguracija',
     reset: '🔄 Reset',
     installApp: '📱 Namesti lokalno',
 
