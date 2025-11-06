@@ -512,18 +512,45 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
                     </tr>
                   </thead>
                   <tbody>
-                    {(showAllProducts ? productConfig : productConfig.slice(0, 10)).map((product, idx) => (
-                      <tr key={idx} className="border-b hover:bg-gray-50">
-                        <td className="px-4 py-2 font-mono text-xs">{product.sku}</td>
-                        <td className="px-4 py-2">{product.name}</td>
-                        <td className="px-4 py-2 text-center">
-                          <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
-                            {product.program}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2 text-center">{product.unitsPerTray}</td>
-                      </tr>
-                    ))}
+                    {(showAllProducts ? productConfig : productConfig.slice(0, 10)).map((product, idx) => {
+                      // Znajdź prawdziwy indeks w pełnym productConfig
+                      const realIdx = showAllProducts ? idx : productConfig.findIndex(p => p.sku === product.sku);
+
+                      return (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="px-4 py-2 font-mono text-xs">{product.sku}</td>
+                          <td className="px-4 py-2">{product.name}</td>
+                          <td className="px-4 py-2 text-center">
+                            <input
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={product.program}
+                              onChange={(e) => {
+                                const newConfig = [...productConfig];
+                                newConfig[realIdx].program = parseInt(e.target.value) || 1;
+                                setProductConfig(newConfig);
+                              }}
+                              className="w-16 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </td>
+                          <td className="px-4 py-2 text-center">
+                            <input
+                              type="number"
+                              min="1"
+                              max="100"
+                              value={product.unitsPerTray}
+                              onChange={(e) => {
+                                const newConfig = [...productConfig];
+                                newConfig[realIdx].unitsPerTray = parseInt(e.target.value) || 1;
+                                setProductConfig(newConfig);
+                              }}
+                              className="w-16 px-2 py-1 border border-gray-300 rounded text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
                 {!showAllProducts && productConfig.length > 10 && (
