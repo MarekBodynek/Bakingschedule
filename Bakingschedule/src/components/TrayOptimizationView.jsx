@@ -12,7 +12,8 @@ import {
  * Pokazuje pracownikowi konkretne tace do upieczenia w optymalnej kolejności
  * Priorytetyzuje najpopularniejsze produkty aby były gotowe najwcześniej
  */
-const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
+const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) => {
+  const t = translations || {};
   // Pobierz konfigurację przy każdym renderze (to są proste gettery z localStorage)
   const ovenConfig = getOvenConfiguration();
   const programConfig = getProgramConfiguration();

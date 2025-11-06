@@ -1649,6 +1649,7 @@ const BakeryPlanningSystem = () => {
                       products={products}
                       wavePlan={plans[1]}
                       waveNumber={1}
+                      translations={t}
                     />
                   </div>
                 </div>
@@ -1663,6 +1664,7 @@ const BakeryPlanningSystem = () => {
                       products={products}
                       wavePlan={plans[2]}
                       waveNumber={2}
+                      translations={t}
                     />
                   </div>
                 </div>
@@ -1677,6 +1679,7 @@ const BakeryPlanningSystem = () => {
                       products={products}
                       wavePlan={plans[3]}
                       waveNumber={3}
+                      translations={t}
                     />
                   </div>
                 </div>
