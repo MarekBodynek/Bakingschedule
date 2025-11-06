@@ -19,7 +19,8 @@ import {
   saveActualSales,
   saveActualWaste,
   exportAllData,
-  importAllData
+  importAllData,
+  clearAllData
 } from './utils/localStorage';
 
 import {
@@ -61,6 +62,7 @@ const BakeryPlanningSystem = () => {
   const [showBuffers, setShowBuffers] = useState(false); // Pokaži/skrij bufferje - domyślnie ukryte
   const [showOvenConfig, setShowOvenConfig] = useState(false); // Modal konfiguracji pieców
   const [expandedWaves, setExpandedWaves] = useState({ 1: false, 2: false, 3: false }); // Rozwinięcie fal - domyślnie zwinięte
+  const [showResetModal, setShowResetModal] = useState(false); // Modal potwierdzenia resetu
 
   const previousDateRef = useRef(selectedDate);
 
@@ -1235,55 +1237,11 @@ const BakeryPlanningSystem = () => {
               </button>
 
               <button
-                onClick={() => {
-                  const data = exportAllData();
-                  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `bakery-backup-${new Date().toISOString().slice(0, 10)}.json`;
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                  URL.revokeObjectURL(url);
-                  console.log('💾 Backup created');
-                }}
-                className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded font-medium ml-2"
-                title="Izvozi varnostno kopijo vseh podatkov"
+                onClick={() => setShowResetModal(true)}
+                className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded font-medium ml-2"
+                title="Ponastavitev na začetno stanje"
               >
-                💾 Backup
-              </button>
-
-              <button
-                onClick={() => {
-                  const input = document.createElement('input');
-                  input.type = 'file';
-                  input.accept = 'application/json';
-                  input.onchange = (e) => {
-                    const file = e.target.files[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (event) => {
-                        try {
-                          const data = JSON.parse(event.target.result);
-                          importAllData(data);
-                          console.log('📥 Data restored from backup');
-                          alert('Varnostna kopija uspešno obnovljena!');
-                          window.location.reload();
-                        } catch (err) {
-                          console.error('Error restoring backup:', err);
-                          alert('Napaka pri obnavljanju varnostne kopije: ' + err.message);
-                        }
-                      };
-                      reader.readAsText(file);
-                    }
-                  };
-                  input.click();
-                }}
-                className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded font-medium ml-2"
-                title="Uvozi varnostno kopijo"
-              >
-                📥 Restore
+                🔄 Reset
               </button>
             </div>
           </div>
@@ -1754,6 +1712,54 @@ const BakeryPlanningSystem = () => {
           setShowOvenConfig(false);
         }}
       />
+
+      {/* Reset Confirmation Modal */}
+      {showResetModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <AlertCircle className="w-8 h-8 text-red-600" />
+              <h3 className="text-xl font-bold text-gray-800">Ponastavitev aplikacije</h3>
+            </div>
+            <p className="text-gray-700 mb-4">
+              Ta operacija bo izbrisala <strong>vse podatke</strong> iz aplikacije:
+            </p>
+            <ul className="list-disc list-inside text-sm text-gray-600 mb-4 space-y-1">
+              <li>Vse načrte proizvodnje</li>
+              <li>Korekture in prilagoditve</li>
+              <li>Metrike in statistike</li>
+              <li>Konfiguracijo pečic in programov</li>
+              <li>Naložene podatkovne datoteke</li>
+            </ul>
+            <div className="bg-red-50 border border-red-200 rounded p-3 mb-4">
+              <p className="text-sm text-red-800 font-semibold">
+                ⚠️ Ta operacija je <strong>nepovratna</strong>. Priporočamo, da najprej ustvarite varnostno kopijo.
+              </p>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              Ali ste prepričani, da želite ponastaviti aplikacijo na začetno stanje?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowResetModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold transition-colors"
+              >
+                Prekliči
+              </button>
+              <button
+                onClick={() => {
+                  clearAllData();
+                  console.log('🔄 Application reset to initial state');
+                  window.location.reload();
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
+              >
+                Ponastavi vse
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
     </>
   );
