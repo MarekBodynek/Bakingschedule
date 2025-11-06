@@ -64,6 +64,12 @@ const BakeryPlanningSystem = () => {
   const [expandedWaves, setExpandedWaves] = useState({ 1: false, 2: false, 3: false }); // Rozwinięcie fal - domyślnie zwinięte
   const [showResetModal, setShowResetModal] = useState(false); // Modal potwierdzenia resetu
 
+  // PWA Installation
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  const [installPassword, setInstallPassword] = useState('');
+  const [installError, setInstallError] = useState('');
+
   const previousDateRef = useRef(selectedDate);
 
   const handleDateChange = (e) => {
@@ -468,6 +474,47 @@ const BakeryPlanningSystem = () => {
       }
     }
   }, [selectedDate, dataLoaded]);
+
+  // PWA Installation - słuchaj eventu beforeinstallprompt
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      console.log('📱 PWA install prompt ready');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
+  }, []);
+
+  const handleInstallClick = () => {
+    setShowInstallModal(true);
+    setInstallPassword('');
+    setInstallError('');
+  };
+
+  const handleInstallSubmit = async () => {
+    if (installPassword !== 'Keram098') {
+      setInstallError('Napačno geslo');
+      return;
+    }
+
+    if (!deferredPrompt) {
+      setInstallError('Instalacija ni na voljo');
+      return;
+    }
+
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    console.log(`📱 PWA install outcome: ${outcome}`);
+
+    setDeferredPrompt(null);
+    setShowInstallModal(false);
+    setInstallPassword('');
+  };
 
   const calculateDynamicBuffer = (sku, targetDate, waveHours) => {
     const productSales = salesData2025.filter(s => s.eanCode === sku);
@@ -1243,6 +1290,16 @@ const BakeryPlanningSystem = () => {
               >
                 🔄 Reset
               </button>
+
+              {deferredPrompt && (
+                <button
+                  onClick={handleInstallClick}
+                  className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded font-medium ml-2"
+                  title="Namestite aplikacijo lokalno"
+                >
+                  📱 Zainstaluj lokalnie
+                </button>
+              )}
             </div>
           </div>
           <div className="text-right">
@@ -1755,6 +1812,61 @@ const BakeryPlanningSystem = () => {
                 className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
               >
                 Ponastavi vse
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PWA Install Password Modal */}
+      {showInstallModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <CheckCircle className="w-8 h-8 text-green-600" />
+              <h3 className="text-xl font-bold text-gray-800">Instalacja lokalna</h3>
+            </div>
+            <p className="text-gray-700 mb-4">
+              Wprowadź hasło aby zainstalować aplikację lokalnie na swoim urządzeniu.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Geslo:</label>
+              <input
+                type="password"
+                value={installPassword}
+                onChange={(e) => setInstallPassword(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleInstallSubmit();
+                  }
+                }}
+                placeholder="Vnesite geslo"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                autoFocus
+              />
+              {installError && (
+                <p className="mt-2 text-sm text-red-600">{installError}</p>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 mb-6">
+              📱 Po instalacji aplikacja będzie dostępna jako ikona na ekranie głównym i będzie działać offline.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowInstallModal(false);
+                  setInstallPassword('');
+                  setInstallError('');
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold transition-colors"
+              >
+                Prekliči
+              </button>
+              <button
+                onClick={handleInstallSubmit}
+                className="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-colors"
+              >
+                Namesti
               </button>
             </div>
           </div>
