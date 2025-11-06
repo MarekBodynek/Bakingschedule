@@ -290,7 +290,7 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
               {allTrays.map((tray, index) => (
                 <tr
                   key={tray.id}
-                  className={`border-b border-gray-200 hover:bg-blue-50 transition-colors ${
+                  className={`border-b-4 border-blue-200 hover:bg-blue-50 transition-colors ${
                     tray.product.isKey ? 'bg-yellow-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                   }`}
                 >
