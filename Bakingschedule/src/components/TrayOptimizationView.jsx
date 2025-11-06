@@ -71,29 +71,41 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
     // 2. Sortuj według priorytetu (najpopularniejsze najpierw)
     productsWithData.sort((a, b) => b.priority - a.priority);
 
-    // 3. Utwórz tace z produktami
+    // 3. Utwórz tace z produktami - ROUND ROBIN dla pełnego asortymentu od początku
     const allTrays = [];
     let trayId = 1;
 
-    productsWithData.forEach(product => {
-      let remainingQty = product.quantity;
+    // Przygotuj strukturę z pozostałymi ilościami dla każdego produktu
+    const productQueue = productsWithData.map(product => ({
+      product: product,
+      remainingQty: product.quantity,
+      traysNeeded: Math.ceil(product.quantity / product.unitsPerTray)
+    }));
 
-      while (remainingQty > 0) {
-        const qtyOnThisTray = Math.min(remainingQty, product.unitsPerTray);
+    // Round-robin: dodawaj po jednej tacy każdego produktu w kolejnych rundach
+    let hasRemainingProducts = true;
+    while (hasRemainingProducts) {
+      hasRemainingProducts = false;
 
-        allTrays.push({
-          id: trayId++,
-          product: product,
-          quantity: qtyOnThisTray,
-          program: product.bakingProgram,
-          programName: product.programName,
-          bakingTime: product.bakingTime,
-          priority: product.priority
-        });
+      productQueue.forEach(item => {
+        if (item.remainingQty > 0) {
+          hasRemainingProducts = true;
+          const qtyOnThisTray = Math.min(item.remainingQty, item.product.unitsPerTray);
 
-        remainingQty -= qtyOnThisTray;
-      }
-    });
+          allTrays.push({
+            id: trayId++,
+            product: item.product,
+            quantity: qtyOnThisTray,
+            program: item.product.bakingProgram,
+            programName: item.product.programName,
+            bakingTime: item.product.bakingTime,
+            priority: item.product.priority
+          });
+
+          item.remainingQty -= qtyOnThisTray;
+        }
+      });
+    }
 
     // 4. Pogrupuj tace według programu
     const traysByProgram = {};
