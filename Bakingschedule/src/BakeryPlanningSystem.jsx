@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Clock, AlertCircle, CheckCircle, RefreshCw, Upload, Edit3, Package, TrendingUp, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Clock, AlertCircle, CheckCircle, RefreshCw, Upload, Edit3, Package, TrendingUp, ChevronDown, ChevronUp, Printer } from 'lucide-react';
 import _ from 'lodash';
 import * as XLSX from 'xlsx';
 
@@ -1429,20 +1429,14 @@ const BakeryPlanningSystem = () => {
                     <div className="text-2xl font-bold text-green-600">{getDailyTotalPlanned()} kos</div>
                     <div className="text-sm text-gray-500">zgo: {getDailyTotalHistorical()}</div>
                   </div>
-                  <div className="no-print flex flex-col items-center gap-2 px-4 py-3 bg-blue-50 border-2 border-blue-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-blue-800 font-semibold">
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                      </svg>
-                      <span>Za tiskanje</span>
-                    </div>
-                    <div className="flex gap-2">
-                      <kbd className="px-2 py-1 bg-white border border-blue-300 rounded text-xs font-bold text-blue-900">Ctrl</kbd>
-                      <span className="text-blue-600 font-bold">+</span>
-                      <kbd className="px-2 py-1 bg-white border border-blue-300 rounded text-xs font-bold text-blue-900">P</kbd>
-                    </div>
-                    <div className="text-xs text-blue-600">(Cmd+P on Mac)</div>
-                  </div>
+                  <button
+                    onClick={() => window.print()}
+                    className="print:hidden flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg"
+                    title="Natisni plan proizvodnje"
+                  >
+                    <Printer className="w-5 h-5" />
+                    Natisni
+                  </button>
                 </div>
               </div>
 
