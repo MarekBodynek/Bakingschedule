@@ -187,13 +187,19 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
   const { batches, totalTrays, totalTime } = trayAllocation;
   const totalPieces = batches.reduce((sum, batch) => sum + batch.totalPieces, 0);
 
-  // Zbierz wszystkie tace w jedną listę sekwencyjną
-  const allTrays = [];
+  // Zbierz wszystkie tace z informacją o batchu
+  const allTraysWithBatch = [];
   batches.forEach(batch => {
     batch.trays.forEach(tray => {
-      allTrays.push(tray);
+      allTraysWithBatch.push({
+        ...tray,
+        batchNumber: batch.batchNumber
+      });
     });
   });
+
+  // Flatten dla druku (bez informacji o batchu)
+  const allTrays = allTraysWithBatch.map(({ batchNumber, ...tray }) => tray);
 
   return (
     <div className="space-y-4" data-wave={waveNumber}>
@@ -287,42 +293,49 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
               </tr>
             </thead>
             <tbody>
-              {allTrays.map((tray, index) => (
-                <>
-                <tr
-                  key={tray.id}
-                  className={`hover:bg-blue-50 transition-colors ${
-                    tray.product.isKey ? 'bg-yellow-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                  }`}
-                >
-                  <td className="px-4 py-6">
-                    <div className="w-10 h-10 rounded bg-blue-600 text-white flex items-center justify-center font-bold">
-                      {tray.id}
-                    </div>
-                  </td>
-                  <td className="px-4 py-6">
-                    <div className="font-semibold text-gray-800">
-                      {tray.product.name}
-                      {tray.product.isKey && (
-                        <span className="ml-2 px-2 py-0.5 bg-yellow-200 text-yellow-800 rounded text-xs font-bold">
-                          ★ {t.keyProduct || 'KEY'}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-4 py-6 text-sm text-gray-600">{tray.product.sku}</td>
-                  <td className="px-4 py-6 text-sm text-gray-600">{tray.programName}</td>
-                  <td className="px-4 py-6 text-right">
-                    <span className="text-2xl font-bold text-blue-600">{tray.quantity}</span>
-                    <span className="text-sm text-gray-600 ml-1">{t.pcs || 'pcs'}</span>
-                  </td>
-                </tr>
-                {/* Separator between trays */}
-                <tr key={`sep-${tray.id}`} className="h-2 bg-blue-500">
-                  <td colSpan="5" className="p-0"></td>
-                </tr>
-                </>
-              ))}
+              {allTraysWithBatch.map((tray, index) => {
+                // Sprawdź czy to ostatnia taca w batchu
+                const isLastInBatch = index === allTraysWithBatch.length - 1 ||
+                                      allTraysWithBatch[index + 1].batchNumber !== tray.batchNumber;
+
+                return (
+                  <React.Fragment key={tray.id}>
+                    <tr
+                      className={`hover:bg-blue-50 transition-colors ${
+                        tray.product.isKey ? 'bg-yellow-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                      }`}
+                    >
+                      <td className="px-4 py-6">
+                        <div className="w-10 h-10 rounded bg-blue-600 text-white flex items-center justify-center font-bold">
+                          {tray.id}
+                        </div>
+                      </td>
+                      <td className="px-4 py-6">
+                        <div className="font-semibold text-gray-800">
+                          {tray.product.name}
+                          {tray.product.isKey && (
+                            <span className="ml-2 px-2 py-0.5 bg-yellow-200 text-yellow-800 rounded text-xs font-bold">
+                              ★ {t.keyProduct || 'KEY'}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-6 text-sm text-gray-600">{tray.product.sku}</td>
+                      <td className="px-4 py-6 text-sm text-gray-600">{tray.programName}</td>
+                      <td className="px-4 py-6 text-right">
+                        <span className="text-2xl font-bold text-blue-600">{tray.quantity}</span>
+                        <span className="text-sm text-gray-600 ml-1">{t.pcs || 'pcs'}</span>
+                      </td>
+                    </tr>
+                    {/* Separator tylko między batches - nie między tacami w tym samym batchu */}
+                    {isLastInBatch && (
+                      <tr className="h-2 bg-blue-500">
+                        <td colSpan="5" className="p-0"></td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </tbody>
           </table>
         </div>
