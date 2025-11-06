@@ -294,9 +294,15 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
             </thead>
             <tbody>
               {allTraysWithBatch.map((tray, index) => {
+                const nextTray = allTraysWithBatch[index + 1];
+
                 // Sprawdź czy to ostatnia taca w batchu
-                const isLastInBatch = index === allTraysWithBatch.length - 1 ||
-                                      allTraysWithBatch[index + 1].batchNumber !== tray.batchNumber;
+                const isLastInBatch = !nextTray || nextTray.batchNumber !== tray.batchNumber;
+
+                // Sprawdź czy następna taca to inny produkt (ale ten sam batch)
+                const isLastOfProduct = nextTray &&
+                                       nextTray.batchNumber === tray.batchNumber &&
+                                       nextTray.product.sku !== tray.product.sku;
 
                 return (
                   <React.Fragment key={tray.id}>
@@ -327,7 +333,13 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
                         <span className="text-sm text-gray-600 ml-1">{t.pcs || 'pcs'}</span>
                       </td>
                     </tr>
-                    {/* Separator tylko między batches - nie między tacami w tym samym batchu */}
+                    {/* Separator między produktami w tym samym batchu - cieńszy, szary */}
+                    {isLastOfProduct && (
+                      <tr className="h-1 bg-gray-300">
+                        <td colSpan="5" className="p-0"></td>
+                      </tr>
+                    )}
+                    {/* Separator między batches - grubszy, niebieski */}
                     {isLastInBatch && (
                       <tr className="h-2 bg-blue-500">
                         <td colSpan="5" className="p-0"></td>
