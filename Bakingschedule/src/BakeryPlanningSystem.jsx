@@ -1754,6 +1754,7 @@ const BakeryPlanningSystem = () => {
           date={correctionTarget.date}
           originalQuantity={correctionTarget.originalQuantity}
           currentQuantity={correctionTarget.currentQuantity}
+          translations={t}
           onSave={(newQuantity, correction) => {
             // Save correction to localStorage
             saveManagerCorrection(correction);
