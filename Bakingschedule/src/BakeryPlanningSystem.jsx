@@ -1267,23 +1267,23 @@ const BakeryPlanningSystem = () => {
       <div className="bg-white rounded-lg shadow-lg p-6 mb-4 no-print">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">🥐 Načrtovanje peke</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">🥐 {t?.appTitle || 'Načrtovanje peke'}</h1>
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-gray-600 text-sm">{products.length} izdelkov</p>
-              
+              <p className="text-gray-600 text-sm">{products.length} {t?.product?.toLowerCase() || 'izdelkov'}</p>
+
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded px-2 py-1">
                 <div className={`w-2 h-2 rounded-full ${fileStatus.hourly ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-xs text-gray-700 font-medium">Urno</span>
+                <span className="text-xs text-gray-700 font-medium">{t?.hourlyData || 'Urno'}</span>
               </div>
-              
+
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded px-2 py-1">
                 <div className={`w-2 h-2 rounded-full ${fileStatus.daily ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-xs text-gray-700 font-medium">Dnevno</span>
+                <span className="text-xs text-gray-700 font-medium">{t?.dailyData || 'Dnevno'}</span>
               </div>
-              
+
               <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded px-2 py-1">
                 <div className={`w-2 h-2 rounded-full ${fileStatus.waste ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span className="text-xs text-gray-700 font-medium">Odpadki</span>
+                <span className="text-xs text-gray-700 font-medium">{t?.wasteData || 'Odpadki'}</span>
               </div>
               
               <button onClick={() => { setShowUpload(true); }}
@@ -1319,17 +1319,17 @@ const BakeryPlanningSystem = () => {
             </div>
           </div>
           <div className="text-right">
-            <label className="text-sm text-gray-600 block mb-1">Izberi datum</label>
-            <input 
-              type="date" 
+            <label className="text-sm text-gray-600 block mb-1">{t?.selectDate || 'Izberi datum'}</label>
+            <input
+              type="date"
               value={selectedDate}
               onChange={handleDateChange}
               onFocus={() => console.log('📅 Date input focused')}
               onClick={() => console.log('📅 Date input clicked')}
-              className="px-3 py-2 border border-gray-300 rounded-lg font-semibold cursor-pointer" 
+              className="px-3 py-2 border border-gray-300 rounded-lg font-semibold cursor-pointer"
             />
             <div className="mt-1 text-xs text-gray-500">
-              Načrti: {Object.keys(plans).length > 0 ? 'Generirano ✓' : 'Brez'}
+              {t?.plansLabel || 'Načrti:'} {Object.keys(plans).length > 0 ? (t?.plansGenerated || 'Generirano ✓') : (t?.plansNone || 'Brez')}
             </div>
             {isHighSalesDay(selectedDate) && (
               <div className="mt-2 flex flex-col gap-1">
@@ -1351,53 +1351,53 @@ const BakeryPlanningSystem = () => {
         <div className="grid grid-cols-3 gap-3">
           <div className={`p-4 rounded-lg border-2 ${plans[1] ? 'bg-green-50 border-green-300 shadow-md' : 'bg-gray-50 border-gray-200'}`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-lg">Val 1</span>
+              <span className="font-bold text-lg">{t?.wave1 || 'Val 1'}</span>
               {plans[1] && <CheckCircle className="w-5 h-5 text-green-600" />}
             </div>
-            <div className="text-sm text-gray-700 mb-1">6:30 → 7:00-12:00</div>
-            {plans[1] && <div className="text-xs text-gray-600 mb-2">Načrt: {getTotalPlanned(1)} kos</div>}
-            {!plans[1] && <div className="text-xs text-gray-500 mb-2 italic">Klikni za generiranje vseh valov</div>}
+            <div className="text-sm text-gray-700 mb-1">{t?.wave1Time || '6:30 → 7:00-12:00'}</div>
+            {plans[1] && <div className="text-xs text-gray-600 mb-2">{t?.planInfo?.replace('{count}', getTotalPlanned(1)) || `Načrt: ${getTotalPlanned(1)} kos`}</div>}
+            {!plans[1] && <div className="text-xs text-gray-500 mb-2 italic">{t?.clickToGenerate || 'Klikni za generiranje vseh valov'}</div>}
             <button onClick={() => generatePlan(1)} disabled={isGenerating}
               className={`w-full py-2 rounded font-semibold transition-colors ${
                 isGenerating ? 'bg-gray-300 text-gray-500 cursor-not-allowed' :
                 plans[1] ? 'bg-green-600 hover:bg-green-700 text-white' :
                 'bg-blue-600 hover:bg-blue-700 text-white'
               }`}>
-              {isGenerating ? 'Generiranje...' : plans[1] ? '🔄 Ponovno generiraj vse' : '▶ Generiraj vse vale'}
+              {isGenerating ? (t?.generating || 'Generiranje...') : plans[1] ? (t?.regenerateAllWaves || '🔄 Ponovno generiraj vse') : (t?.generateAllWaves || '▶ Generiraj vse vale')}
             </button>
           </div>
 
           <div className={`p-4 rounded-lg border-2 ${plans[2] ? 'bg-blue-50 border-blue-300 shadow-md' : 'bg-gray-50 border-gray-200'}`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-lg">Val 2</span>
+              <span className="font-bold text-lg">{t?.wave2 || 'Val 2'}</span>
               {plans[2] && <CheckCircle className="w-5 h-5 text-green-600" />}
             </div>
-            <div className="text-sm text-gray-700 mb-1">11:30 → 12:00-16:00</div>
-            {plans[2] && <div className="text-xs text-gray-600 mb-2">Načrt: {getTotalPlanned(2)} kos</div>}
-            {!plans[2] && <div className="text-xs text-gray-500 mb-2 italic">Generirano z Valom 1</div>}
+            <div className="text-sm text-gray-700 mb-1">{t?.wave2Time || '11:30 → 12:00-16:00'}</div>
+            {plans[2] && <div className="text-xs text-gray-600 mb-2">{t?.planInfo?.replace('{count}', getTotalPlanned(2)) || `Načrt: ${getTotalPlanned(2)} kos`}</div>}
+            {!plans[2] && <div className="text-xs text-gray-500 mb-2 italic">{t?.generatedWith || 'Generirano z Valom 1'}</div>}
             <button onClick={() => generatePlan(2)} disabled={isGenerating || !plans[1]}
               className={`w-full py-2 rounded font-semibold transition-colors ${
                 isGenerating || !plans[1] ? 'bg-gray-300 text-gray-500 cursor-not-allowed' :
                 'bg-gray-200 hover:bg-gray-300 text-gray-700'
               }`}>
-              {!plans[1] ? '⏸ Čakanje' : 'Ponovno generiraj Val 2'}
+              {!plans[1] ? (t?.waiting || '⏸ Čakanje') : (t?.regenerateWave?.replace('{wave}', '2') || 'Ponovno generiraj Val 2')}
             </button>
           </div>
 
           <div className={`p-4 rounded-lg border-2 ${plans[3] ? 'bg-orange-50 border-orange-300 shadow-md' : 'bg-gray-50 border-gray-200'}`}>
             <div className="flex items-center justify-between mb-2">
-              <span className="font-bold text-lg">Val 3</span>
+              <span className="font-bold text-lg">{t?.wave3 || 'Val 3'}</span>
               {plans[3] && <CheckCircle className="w-5 h-5 text-green-600" />}
             </div>
-            <div className="text-sm text-gray-700 mb-1">15:30 → 16:00-20:00</div>
-            {plans[3] && <div className="text-xs text-gray-600 mb-2">Načrt: {getTotalPlanned(3)} kos</div>}
-            {!plans[3] && <div className="text-xs text-gray-500 mb-2 italic">Generirano z Valom 1</div>}
+            <div className="text-sm text-gray-700 mb-1">{t?.wave3Time || '15:30 → 16:00-20:00'}</div>
+            {plans[3] && <div className="text-xs text-gray-600 mb-2">{t?.planInfo?.replace('{count}', getTotalPlanned(3)) || `Načrt: ${getTotalPlanned(3)} kos`}</div>}
+            {!plans[3] && <div className="text-xs text-gray-500 mb-2 italic">{t?.generatedWith || 'Generirano z Valom 1'}</div>}
             <button onClick={() => generatePlan(3)} disabled={isGenerating || !plans[1]}
               className={`w-full py-2 rounded font-semibold transition-colors ${
                 isGenerating || !plans[1] ? 'bg-gray-300 text-gray-500 cursor-not-allowed' :
                 'bg-gray-200 hover:bg-gray-300 text-gray-700'
               }`}>
-              {!plans[1] ? '⏸ Čakanje' : 'Ponovno generiraj Val 3'}
+              {!plans[1] ? (t?.waiting || '⏸ Čakanje') : (t?.regenerateWave?.replace('{wave}', '3') || 'Ponovno generiraj Val 3')}
             </button>
           </div>
         </div>
@@ -1423,7 +1423,7 @@ const BakeryPlanningSystem = () => {
                   : 'text-gray-600 hover:text-gray-800'
               }`}
             >
-              📋 Plan proizvodnje
+              {t?.productionPlan || '📋 Plan proizvodnje'}
             </button>
             <button
               onClick={() => setActiveTab('trays')}
@@ -1434,7 +1434,7 @@ const BakeryPlanningSystem = () => {
               }`}
             >
               <Package className="w-4 h-4" />
-              Pladenj optimizacija
+              {t?.trayOptimization || 'Pladenj optimizacija'}
             </button>
             <button
               onClick={() => setActiveTab('metrics')}
@@ -1445,7 +1445,7 @@ const BakeryPlanningSystem = () => {
               }`}
             >
               <TrendingUp className="w-4 h-4" />
-              Metrike
+              {t?.metrics || 'Metrike'}
             </button>
           </div>
 

@@ -5,6 +5,18 @@ export const translations = {
     // Nagłówek
     appTitle: 'Planowanie pieczenia',
     selectDate: 'Wybierz datę',
+    plansLabel: 'Plany:',
+    plansGenerated: 'Wygenerowane ✓',
+    plansNone: 'Brak',
+    generating: 'Generowanie...',
+    waiting: '⏸ Oczekiwanie',
+    generatedWith: 'Wygenerowane z Falą 1',
+
+    // Status plików
+    hourlyData: 'Dane godz.',
+    dailyData: 'Dane dzienne',
+    wasteData: 'Odpady',
+    dataLoaded: 'Dane załadowane',
 
     // Przyciski główne
     manageFiles: 'Zarządzaj plikami',
@@ -21,6 +33,11 @@ export const translations = {
     wave3Time: '15:30 → 16:00-20:00',
     regenerate: 'Ponownie generuj',
     generateAll: 'Generuj wszystkie',
+    regenerateWave: 'Ponownie generuj Falę {wave}',
+    generateAllWaves: '▶ Generuj wszystkie fale',
+    regenerateAllWaves: '🔄 Ponownie generuj wszystkie',
+    planInfo: 'Plan: {count} szt.',
+    clickToGenerate: 'Kliknij, aby wygenerować wszystkie fale',
 
     // Zakładki
     productionPlan: '📋 Plan produkcji',
@@ -103,6 +120,18 @@ export const translations = {
     // Header
     appTitle: 'Baking Planning',
     selectDate: 'Select date',
+    plansLabel: 'Plans:',
+    plansGenerated: 'Generated ✓',
+    plansNone: 'None',
+    generating: 'Generating...',
+    waiting: '⏸ Waiting',
+    generatedWith: 'Generated with Wave 1',
+
+    // File status
+    hourlyData: 'Hourly data',
+    dailyData: 'Daily data',
+    wasteData: 'Waste',
+    dataLoaded: 'Data loaded',
 
     // Main buttons
     manageFiles: 'Manage files',
@@ -119,6 +148,11 @@ export const translations = {
     wave3Time: '15:30 → 16:00-20:00',
     regenerate: 'Regenerate',
     generateAll: 'Generate All',
+    regenerateWave: 'Regenerate Wave {wave}',
+    generateAllWaves: '▶ Generate all waves',
+    regenerateAllWaves: '🔄 Regenerate all',
+    planInfo: 'Plan: {count} pcs',
+    clickToGenerate: 'Click to generate all waves',
 
     // Tabs
     productionPlan: '📋 Production Plan',
@@ -201,6 +235,18 @@ export const translations = {
     // Zaglavlje
     appTitle: 'Planiranje pečenja',
     selectDate: 'Odaberi datum',
+    plansLabel: 'Planovi:',
+    plansGenerated: 'Generirano ✓',
+    plansNone: 'Bez',
+    generating: 'Generiranje...',
+    waiting: '⏸ Čekanje',
+    generatedWith: 'Generirano s Valom 1',
+
+    // Status datoteka
+    hourlyData: 'Satni podaci',
+    dailyData: 'Dnevni podaci',
+    wasteData: 'Otpad',
+    dataLoaded: 'Podaci učitani',
 
     // Glavni gumbi
     manageFiles: 'Upravljaj datotekama',
@@ -217,6 +263,11 @@ export const translations = {
     wave3Time: '15:30 → 16:00-20:00',
     regenerate: 'Regeneriraj',
     generateAll: 'Generiraj sve',
+    regenerateWave: 'Regeneriraj Val {wave}',
+    generateAllWaves: '▶ Generiraj sve valove',
+    regenerateAllWaves: '🔄 Regeneriraj sve',
+    planInfo: 'Plan: {count} kom',
+    clickToGenerate: 'Klikni za generiranje svih valova',
 
     // Kartice
     productionPlan: '📋 Plan proizvodnje',
@@ -299,6 +350,18 @@ export const translations = {
     // Glava
     appTitle: 'Načrtovanje peke',
     selectDate: 'Izberi datum',
+    plansLabel: 'Načrti:',
+    plansGenerated: 'Generirano ✓',
+    plansNone: 'Brez',
+    generating: 'Generiranje...',
+    waiting: '⏸ Čakanje',
+    generatedWith: 'Generirano z Valom 1',
+
+    // Status datotek
+    hourlyData: 'Urni podatki',
+    dailyData: 'Dnevni podatki',
+    wasteData: 'Odpadki',
+    dataLoaded: 'Podatki naloženi',
 
     // Glavni gumbi
     manageFiles: 'Upravljaj datoteke',
@@ -315,6 +378,11 @@ export const translations = {
     wave3Time: '15:30 → 16:00-20:00',
     regenerate: 'Ponovno generiraj',
     generateAll: 'Generiraj vse',
+    regenerateWave: 'Ponovno generiraj Val {wave}',
+    generateAllWaves: '▶ Generiraj vse vale',
+    regenerateAllWaves: '🔄 Ponovno generiraj vse',
+    planInfo: 'Načrt: {count} kos',
+    clickToGenerate: 'Klikni za generiranje vseh valov',
 
     // Kartice
     productionPlan: '📋 Plan proizvodnje',
