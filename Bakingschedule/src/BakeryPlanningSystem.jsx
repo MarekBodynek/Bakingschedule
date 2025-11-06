@@ -1694,6 +1694,7 @@ const BakeryPlanningSystem = () => {
               <MetricsDashboard
                 products={products}
                 selectedDate={selectedDate}
+                translations={t}
               />
             </div>
           )}

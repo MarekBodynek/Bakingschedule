@@ -11,7 +11,8 @@ import { getAllMetrics, getAllPlans, getAllStockouts, getActualSales, getActualW
  * - Stockouts count (liczba braków)
  * - Trendy tygodniowe
  */
-const MetricsDashboard = ({ products, selectedDate }) => {
+const MetricsDashboard = ({ products, selectedDate, translations }) => {
+  const t = translations || {};
   const metrics = useMemo(() => {
     const allPlans = getAllPlans();
     const allStockouts = getAllStockouts();
@@ -123,9 +124,9 @@ const MetricsDashboard = ({ products, selectedDate }) => {
     return (
       <div className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6 text-center">
         <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
-        <p className="text-yellow-900 font-semibold mb-2">Ni podatkov o metrikah</p>
+        <p className="text-yellow-900 font-semibold mb-2">{t.noMetricsData || 'Ni podatkov o metrikah'}</p>
         <p className="text-sm text-yellow-700">
-          Metrike bodo na voljo, ko boste vnesli dejanske prodaje in odpadke za generirane načrte.
+          {t.metricsAvailableAfter || 'Metrike bodo na voljo, ko boste vnesli dejanske prodaje in odpadke za generirane načrte.'}
         </p>
       </div>
     );
@@ -153,10 +154,10 @@ const MetricsDashboard = ({ products, selectedDate }) => {
       <div className="bg-white border border-gray-200 rounded-lg p-4">
         <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
           <Target className="w-5 h-5" />
-          Nadzorna plošča metrik uspešnosti
+          {t.metricsPerformanceDashboard || 'Nadzorna plošča metrik uspešnosti'}
         </h3>
         <p className="text-sm text-gray-600 mt-1">
-          Analiza zadnjih {daysWithData} dni s podatki
+          {(t.analysisLastDays || 'Analiza zadnjih {days} dni s podatki').replace('{days}', daysWithData)}
         </p>
       </div>
 
@@ -167,7 +168,7 @@ const MetricsDashboard = ({ products, selectedDate }) => {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Target className={`w-5 h-5 text-${accuracyColor}-600`} />
-              <span className="font-semibold text-gray-700">Natančnost napovedi</span>
+              <span className="font-semibold text-gray-700">{t.forecastAccuracy || 'Natančnost napovedi'}</span>
             </div>
             {accuracyTrend !== 0 && (
               <div className={`flex items-center gap-1 text-xs font-bold ${accuracyTrend > 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -180,7 +181,7 @@ const MetricsDashboard = ({ products, selectedDate }) => {
             {avgAccuracy.toFixed(1)}%
           </div>
           <div className="text-xs text-gray-600 mt-1">
-            Cilj: &gt;90% (Odlično)
+            {t.targetExcellent || 'Cilj: >90% (Odlično)'}
           </div>
         </div>
 
@@ -189,7 +190,7 @@ const MetricsDashboard = ({ products, selectedDate }) => {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Trash2 className={`w-5 h-5 text-${wasteColor}-600`} />
-              <span className="font-semibold text-gray-700">Odpadki</span>
+              <span className="font-semibold text-gray-700">{t.waste || 'Odpadki'}</span>
             </div>
             {wasteTrend !== 0 && (
               <div className={`flex items-center gap-1 text-xs font-bold ${wasteTrend < 0 ? 'text-green-600' : 'text-red-600'}`}>
@@ -202,7 +203,7 @@ const MetricsDashboard = ({ products, selectedDate }) => {
             {avgWaste.toFixed(1)}%
           </div>
           <div className="text-xs text-gray-600 mt-1">
-            Cilj: &lt;5% (Dobro)
+            {t.wasteTargetExcellent || 'Cilj: <3% (Odlično)'}
           </div>
         </div>
 
@@ -211,14 +212,14 @@ const MetricsDashboard = ({ products, selectedDate }) => {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <AlertTriangle className={`w-5 h-5 text-${totalStockouts === 0 ? 'green' : totalStockouts <= 2 ? 'yellow' : 'red'}-600`} />
-              <span className="font-semibold text-gray-700">Pomanjkanje</span>
+              <span className="font-semibold text-gray-700">{t.stockouts || 'Pomanjkanje'}</span>
             </div>
           </div>
           <div className={`text-4xl font-bold text-${totalStockouts === 0 ? 'green' : totalStockouts <= 2 ? 'yellow' : 'red'}-600`}>
             {totalStockouts}
           </div>
           <div className="text-xs text-gray-600 mt-1">
-            Povprečno: {avgStockouts.toFixed(1)}/dan
+            {(t.avgPerDay || 'Povprečno: {avg}/dan').replace('{avg}', avgStockouts.toFixed(1))}
           </div>
         </div>
       </div>
@@ -226,19 +227,19 @@ const MetricsDashboard = ({ products, selectedDate }) => {
       {/* Tabela dnevnih metrik */}
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
-          <h4 className="font-semibold text-gray-800">Dnevna zgodovina</h4>
+          <h4 className="font-semibold text-gray-800">{t.dailyHistory || 'Dnevna zgodovina'}</h4>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">Datum</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">Planirano</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">Prodano</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">Odpadki</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">Natančnost</th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">Odpadki %</th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">Pomanjkanje</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">{t.date || 'Datum'}</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">{t.planned || 'Planirano'}</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">{t.sold || 'Prodano'}</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">{t.waste || 'Odpadki'}</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">{t.accuracy || 'Natančnost'}</th>
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">{t.wastePercent || 'Odpadki %'}</th>
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">{t.stockouts || 'Pomanjkanje'}</th>
               </tr>
             </thead>
             <tbody>
@@ -290,30 +291,30 @@ const MetricsDashboard = ({ products, selectedDate }) => {
 
       {/* Priporočila */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-900 mb-3">💡 Priporočila</h4>
+        <h4 className="font-semibold text-blue-900 mb-3">{t.recommendations || '💡 Priporočila'}</h4>
         <div className="space-y-2 text-sm text-blue-800">
           {avgAccuracy < 85 && (
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <p>Natančnost pod 85%. Razmislite o zagon optimizacije uteži ML.</p>
+              <p>{t.accuracyLow || 'Natančnost pod 85%. Razmislite o zagon optimizacije uteži ML.'}</p>
             </div>
           )}
           {avgWaste > 5 && (
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <p>Odpadki nad 5%. Sistem samodejno zmanjšuje bufferje za izdelke z visokimi odpadki.</p>
+              <p>{t.highWasteDescription || 'Odpadki nad 5%. Sistem samodejno zmanjšuje bufferje za izdelke z visokimi odpadki.'}</p>
             </div>
           )}
           {totalStockouts > 3 && (
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <p>Odkrito {totalStockouts} pomanjkanj. Sistem bo povečal napovedi za izdelke, ki se pogosto zmanjkajo.</p>
+              <p>{(t.stockoutsDetected || 'Odkrito {count} pomanjkanj. Sistem bo povečal napovedi za izdelke, ki se pogosto zmanjkajo.').replace('{count}', totalStockouts)}</p>
             </div>
           )}
           {avgAccuracy >= 90 && avgWaste <= 5 && totalStockouts <= 2 && (
             <div className="flex items-start gap-2">
               <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-green-600" />
-              <p className="text-green-800 font-semibold">Odlična uspešnost! Sistem deluje optimalno.</p>
+              <p className="text-green-800 font-semibold">{t.excellentPerformance || 'Odlična uspešnost! Sistem deluje optimalno.'}</p>
             </div>
           )}
         </div>
