@@ -17,7 +17,15 @@ import {
  * - Ustawienie ilości i pojemności pieców
  */
 
-const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
+const OvenConfigurationModal = ({
+  isOpen,
+  onClose,
+  onSave,
+  currentLanguage,
+  onLanguageChange,
+  availableLanguages,
+  translations
+}) => {
   const [productConfig, setProductConfig] = useState([]); // Produkty z pliku Excel
   const [programConfig, setProgramConfig] = useState({}); // Konfiguracja programów
   const [ovenSettings, setOvenSettings] = useState({
@@ -269,7 +277,7 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
       <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">⚙️ Konfiguracija pečice</h2>
+          <h2 className="text-2xl font-bold text-gray-800">{translations?.configTitle || '⚙️ Konfiguracija pečice'}</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 transition-colors"
@@ -279,9 +287,39 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Language Selector Section */}
+          <div className="space-y-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-gray-800">
+              {translations?.languageSettings || '1. Ustawienia języka'}
+            </h3>
+            <div className="flex flex-col gap-3">
+              <label className="text-sm font-medium text-gray-700">
+                {translations?.selectLanguage || 'Wybierz język:'}
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {availableLanguages?.map((lang) => (
+                  <button
+                    key={lang.code}
+                    onClick={() => onLanguageChange(lang.code)}
+                    className={`flex items-center gap-2 px-4 py-3 rounded-lg font-medium transition-all ${
+                      currentLanguage === lang.code
+                        ? 'bg-blue-600 text-white shadow-md'
+                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                    }`}
+                  >
+                    <span className="text-2xl">{lang.flag}</span>
+                    <span>{lang.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Upload Section */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-800">1. Naloži konfiguracijo izdelkov</h3>
+            <h3 className="text-lg font-semibold text-gray-800">
+              {translations?.uploadFiles || '2. Wgraj pliki konfiguracyjne'}
+            </h3>
 
             <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
@@ -345,7 +383,9 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
           {/* Program Configuration */}
           {programs.length > 0 && (
             <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-800">2. Nastavi čase programov</h3>
+              <h3 className="text-lg font-semibold text-gray-800">
+                {translations?.ovenPrograms || '3. Programy pieczenia'}
+              </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {programs.map(programNum => (
@@ -488,17 +528,17 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
           {productConfig.length > 0 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800">
-                4. Pregled izdelkov {!showAllProducts && `(prvih 10)`}
+                {translations?.productPreview || '4. Podgląd produktów'} {!showAllProducts && `${translations?.firstProducts || '(pierwsze 10)'}`}
               </h3>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead className="bg-gray-100">
                     <tr>
-                      <th className="px-4 py-2 text-left">EAN</th>
-                      <th className="px-4 py-2 text-left">Naziv</th>
-                      <th className="px-4 py-2 text-center">Program</th>
-                      <th className="px-4 py-2 text-center">Kosov/pladenj</th>
+                      <th className="px-4 py-2 text-left">{translations?.ean || 'EAN'}</th>
+                      <th className="px-4 py-2 text-left">{translations?.name || 'Nazwa'}</th>
+                      <th className="px-4 py-2 text-center">{translations?.program || 'Program'}</th>
+                      <th className="px-4 py-2 text-center">{translations?.piecesPerTray || 'Sztuk/tacę'}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -549,7 +589,10 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
                       onClick={() => setShowAllProducts(!showAllProducts)}
                       className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm font-semibold transition-colors"
                     >
-                      {showAllProducts ? 'Pokaži manj ▲' : `Pokaži vse (${productConfig.length}) ▼`}
+                      {showAllProducts
+                        ? `${translations?.showLess || 'Pokaż mniej'} ▲`
+                        : `${translations?.showAll || 'Pokaż wszystkie'} (${productConfig.length}) ▼`
+                      }
                     </button>
                   </div>
                 )}
@@ -564,7 +607,7 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
             onClick={onClose}
             className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Prekliči
+            {translations?.cancel || 'Anuluj'}
           </button>
           <button
             onClick={handleSave}
@@ -572,7 +615,7 @@ const OvenConfigurationModal = ({ isOpen, onClose, onSave }) => {
             className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
           >
             <Save size={18} />
-            Shrani konfiguracijo
+            {translations?.saveConfig || 'Zapisz konfigurację'}
           </button>
         </div>
       </div>

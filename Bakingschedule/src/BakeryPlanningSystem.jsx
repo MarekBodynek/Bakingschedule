@@ -36,6 +36,9 @@ import TrayOptimizationView from './components/TrayOptimizationView';
 import MetricsDashboard from './components/MetricsDashboard';
 import OvenConfigurationModal from './components/OvenConfigurationModal';
 
+// ✨ IMPORT - Internationalization
+import { getLanguageDictionary, availableLanguages } from './utils/i18n';
+
 const BakeryPlanningSystem = () => {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [salesData2025, setSalesData2025] = useState([]);
@@ -69,6 +72,12 @@ const BakeryPlanningSystem = () => {
   const [showInstallModal, setShowInstallModal] = useState(false);
   const [installPassword, setInstallPassword] = useState('');
   const [installError, setInstallError] = useState('');
+
+  // ✨ Language
+  const [currentLanguage, setCurrentLanguage] = useState(() => {
+    return localStorage.getItem('appLanguage') || 'sl'; // Domyślnie słoweński
+  });
+  const t = getLanguageDictionary(currentLanguage);
 
   const previousDateRef = useRef(selectedDate);
 
@@ -514,6 +523,13 @@ const BakeryPlanningSystem = () => {
     setDeferredPrompt(null);
     setShowInstallModal(false);
     setInstallPassword('');
+  };
+
+  // ✨ Language change handler
+  const handleLanguageChange = (newLang) => {
+    setCurrentLanguage(newLang);
+    localStorage.setItem('appLanguage', newLang);
+    console.log('🌐 Language changed to:', newLang);
   };
 
   const calculateDynamicBuffer = (sku, targetDate, waveHours) => {
@@ -1272,32 +1288,32 @@ const BakeryPlanningSystem = () => {
               
               <button onClick={() => { setShowUpload(true); }}
                 className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded font-medium ml-2">
-                Upravljaj datoteke
+                {t?.manageFiles || 'Upravljaj datoteke'}
               </button>
 
               <button
                 onClick={() => { setShowOvenConfig(true); }}
                 className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-2 py-1 rounded font-medium ml-2"
-                title="Konfiguracija pečice in programov"
+                title={t?.configTitle || 'Konfiguracija pečice in programov'}
               >
-                ⚙️ Konfiguracija pečice
+                {t?.ovenConfig || '⚙️ Konfiguracija pečice'}
               </button>
 
               <button
                 onClick={() => setShowResetModal(true)}
                 className="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-2 py-1 rounded font-medium ml-2"
-                title="Ponastavitev na začetno stanje"
+                title={t?.resetTitle || 'Ponastavitev na začetno stanje'}
               >
-                🔄 Reset
+                {t?.reset || '🔄 Reset'}
               </button>
 
               {deferredPrompt && (
                 <button
                   onClick={handleInstallClick}
                   className="text-xs bg-green-100 hover:bg-green-200 text-green-700 px-2 py-1 rounded font-medium ml-2"
-                  title="Namestite aplikacijo lokalno"
+                  title={t?.installTitle || 'Namestite aplikacijo lokalno'}
                 >
-                  📱 Zainstaluj lokalnie
+                  {t?.installApp || '📱 Zainstaluj lokalnie'}
                 </button>
               )}
             </div>
@@ -1768,6 +1784,10 @@ const BakeryPlanningSystem = () => {
           // Configuration is already saved in modal, just close
           setShowOvenConfig(false);
         }}
+        currentLanguage={currentLanguage}
+        onLanguageChange={handleLanguageChange}
+        availableLanguages={availableLanguages}
+        translations={t}
       />
 
       {/* Reset Confirmation Modal */}
