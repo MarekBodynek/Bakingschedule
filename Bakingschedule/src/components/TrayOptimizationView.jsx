@@ -174,13 +174,13 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
     return (
       <div className="bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
         <Package className="w-16 h-16 text-gray-400 mx-auto mb-3" />
-        <p className="text-gray-600 font-semibold">Ni načrta za optimizacijo</p>
-        <p className="text-sm text-gray-500">Najprej generirajte načrt peke</p>
+        <p className="text-gray-600 font-semibold">{t.noPlanForOptimization || 'No optimization plan'}</p>
+        <p className="text-sm text-gray-500">{t.generatePlanFirst || 'Generate baking plan first'}</p>
       </div>
     );
   }
 
-  const waveNames = { 1: 'Jutranji val', 2: 'Opoldanski val', 3: 'Večerni val' };
+  const waveNames = { 1: t.wave1Name || 'Morning wave', 2: t.wave2Name || 'Midday wave', 3: t.wave3Name || 'Evening wave' };
   const waveColors = { 1: 'green', 2: 'blue', 3: 'orange' };
   const color = waveColors[waveNumber] || 'gray';
 
@@ -203,39 +203,39 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
           <div className="flex-1">
             <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
               <ChefHat className="w-5 h-5 print:hidden" />
-              Plan pečenja - {waveNames[waveNumber]}
+              {t.bakingPlan || 'Baking plan'} - {waveNames[waveNumber]}
             </h3>
             <p className="text-sm text-gray-600 mt-1 print:hidden">
-              Izdelki so razporejeni po prioriteti - najpopularnejši najprej
+              {t.productsArrangedByPriority || 'Products arranged by priority - most popular first'}
             </p>
             {ovenSettings.individualCapacities && (
               <p className="text-xs text-gray-500 mt-1 print:hidden">
-                Pečice: {ovenSettings.individualCapacities.map((cap, idx) => `${idx + 1}. (${cap})`).join(' • ')} = {ovenSettings.ovenCapacity} pladnjev skupaj
+                {t.ovens || 'Ovens'}: {ovenSettings.individualCapacities.map((cap, idx) => `${idx + 1}. (${cap})`).join(' • ')} = {ovenSettings.ovenCapacity} {t.traysTotal || 'trays total'}
               </p>
             )}
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right space-y-1 print:hidden">
               <div>
-                <div className="text-sm text-gray-600">Runde pečenja</div>
+                <div className="text-sm text-gray-600">{t.bakingRounds || 'Baking rounds'}</div>
                 <div className="text-2xl font-bold text-purple-600">{batches.length}</div>
               </div>
               <div>
-                <div className="text-sm text-gray-600">Skupaj pladnjev</div>
+                <div className="text-sm text-gray-600">{t.totalTrays || 'Total trays'}</div>
                 <div className="text-lg font-bold text-blue-600">{totalTrays}</div>
               </div>
               <div className="text-xs text-gray-500 flex items-center gap-1 justify-end">
                 <Clock className="w-3 h-3" />
-                ~{totalTime} minut skupaj
+                ~{totalTime} {t.minutesTotal || 'minutes total'}
               </div>
             </div>
             <button
               onClick={handlePrint}
               className="print:hidden flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors shadow-md hover:shadow-lg"
-              title="Natisni harmonogram odpieku"
+              title={t.printSchedule || 'Print baking schedule'}
             >
               <Printer className="w-5 h-5" />
-              Natisni
+              {t.print || 'Print'}
             </button>
           </div>
         </div>
@@ -246,11 +246,11 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
         <table className="w-full border-collapse border-2 border-black">
           <thead>
             <tr className="bg-gray-200">
-              <th className="border border-black px-3 py-2 text-left font-bold">Taca</th>
-              <th className="border border-black px-3 py-2 text-left font-bold">Produkt</th>
+              <th className="border border-black px-3 py-2 text-left font-bold">{t.tray || 'Tray'}</th>
+              <th className="border border-black px-3 py-2 text-left font-bold">{t.product || 'Product'}</th>
               <th className="border border-black px-3 py-2 text-left font-bold">EAN</th>
-              <th className="border border-black px-3 py-2 text-left font-bold">Program</th>
-              <th className="border border-black px-3 py-2 text-right font-bold">Količina</th>
+              <th className="border border-black px-3 py-2 text-left font-bold">{t.program || 'Program'}</th>
+              <th className="border border-black px-3 py-2 text-right font-bold">{t.quantity || 'Quantity'}</th>
             </tr>
           </thead>
           <tbody>
@@ -266,8 +266,8 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
           </tbody>
           <tfoot>
             <tr className="bg-gray-100 font-bold">
-              <td colSpan="4" className="border border-black px-3 py-2">SKUPAJ</td>
-              <td className="border border-black px-3 py-2 text-right">{totalPieces} kosov</td>
+              <td colSpan="4" className="border border-black px-3 py-2">{t.total || 'TOTAL'}</td>
+              <td className="border border-black px-3 py-2 text-right">{totalPieces} {t.pieces || 'pieces'}</td>
             </tr>
           </tfoot>
         </table>
@@ -279,11 +279,11 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
           <table className="w-full">
             <thead className="bg-gray-100 border-b-2 border-gray-300">
               <tr>
-                <th className="px-4 py-3 text-left font-bold text-gray-700">Taca</th>
-                <th className="px-4 py-3 text-left font-bold text-gray-700">Produkt</th>
+                <th className="px-4 py-3 text-left font-bold text-gray-700">{t.tray || 'Tray'}</th>
+                <th className="px-4 py-3 text-left font-bold text-gray-700">{t.product || 'Product'}</th>
                 <th className="px-4 py-3 text-left font-bold text-gray-700">EAN</th>
-                <th className="px-4 py-3 text-left font-bold text-gray-700">Program</th>
-                <th className="px-4 py-3 text-right font-bold text-gray-700">Količina</th>
+                <th className="px-4 py-3 text-left font-bold text-gray-700">{t.program || 'Program'}</th>
+                <th className="px-4 py-3 text-right font-bold text-gray-700">{t.quantity || 'Quantity'}</th>
               </tr>
             </thead>
             <tbody>
@@ -304,7 +304,7 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
                       {tray.product.name}
                       {tray.product.isKey && (
                         <span className="ml-2 px-2 py-0.5 bg-yellow-200 text-yellow-800 rounded text-xs font-bold">
-                          ★ KLJUČNO
+                          ★ {t.keyProduct || 'KEY'}
                         </span>
                       )}
                     </div>
@@ -313,7 +313,7 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
                   <td className="px-4 py-3 text-sm text-gray-600">{tray.programName}</td>
                   <td className="px-4 py-3 text-right">
                     <span className="text-2xl font-bold text-blue-600">{tray.quantity}</span>
-                    <span className="text-sm text-gray-600 ml-1">kos</span>
+                    <span className="text-sm text-gray-600 ml-1">{t.pcs || 'pcs'}</span>
                   </td>
                 </tr>
               ))}
@@ -326,13 +326,13 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
       <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-sm font-semibold text-gray-700">Skupno načrtovano:</div>
+            <div className="text-sm font-semibold text-gray-700">{t.totalPlanned || 'Total planned'}:</div>
             <div className="text-2xl font-bold text-gray-900 mt-1">
-              {totalPieces} kosov na {totalTrays} pladnjih
+              {totalPieces} {t.piecesOn || 'pieces on'} {totalTrays} {t.trays || 'trays'}
             </div>
           </div>
           <div className="text-right">
-            <div className="text-sm text-gray-600">Skupni čas pečenja</div>
+            <div className="text-sm text-gray-600">{t.totalBakingTime || 'Total baking time'}</div>
             <div className="text-3xl font-bold text-blue-600 flex items-center gap-2">
               <Clock className="w-8 h-8" />
               {totalTime} min

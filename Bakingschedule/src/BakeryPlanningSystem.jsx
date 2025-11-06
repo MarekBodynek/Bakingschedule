@@ -1100,45 +1100,45 @@ const BakeryPlanningSystem = () => {
               <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}
                 className="border-4 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-blue-400 transition-colors cursor-pointer bg-gray-50">
                 <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-gray-700 mb-2">Naloži podatke o prodaji</h3>
-                <p className="text-gray-600 mb-4">Povleci in spusti Excel datoteke sem ali klikni za izbiro</p>
+                <h3 className="text-xl font-bold text-gray-700 mb-2">{t.uploadSalesData || 'Upload sales data'}</h3>
+                <p className="text-gray-600 mb-4">{t.dragDropFiles || 'Drag and drop Excel files here or click to select'}</p>
                 <label className="inline-block">
                   <input type="file" accept=".xlsx,.xls" onChange={(e) => handleFileUpload(e)} multiple className="hidden" />
                   <span className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold cursor-pointer inline-block">
-                    Izberi datoteke
+                    {t.selectFiles || 'Select files'}
                   </span>
                 </label>
               </div>
               
               {(fileStatus.hourly || fileStatus.daily || fileStatus.waste) && (
                 <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
-                  <p className="text-sm text-green-800 font-semibold mb-3">✅ Naložene datoteke:</p>
+                  <p className="text-sm text-green-800 font-semibold mb-3">✅ {t.uploadedFiles || 'Uploaded files'}:</p>
                   <div className="space-y-2">
                     {fileStatus.hourly && (
                       <div className="flex items-center justify-between bg-white rounded px-3 py-2">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-gray-700">Urna prodaja</span>
+                          <span className="text-sm font-medium text-gray-700">{t.hourlySales || 'Hourly sales'}</span>
                         </div>
-                        <span className="text-xs text-gray-600">{salesData2025.length} zapisov</span>
+                        <span className="text-xs text-gray-600">{salesData2025.length} {t.records || 'records'}</span>
                       </div>
                     )}
                     {fileStatus.daily && (
                       <div className="flex items-center justify-between bg-white rounded px-3 py-2">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-gray-700">Dnevna prodaja</span>
+                          <span className="text-sm font-medium text-gray-700">{t.dailySales || 'Daily sales'}</span>
                         </div>
-                        <span className="text-xs text-gray-600">{salesData2024.length} zapisov</span>
+                        <span className="text-xs text-gray-600">{salesData2024.length} {t.records || 'records'}</span>
                       </div>
                     )}
                     {fileStatus.waste && (
                       <div className="flex items-center justify-between bg-white rounded px-3 py-2">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-gray-700">Podatki o odpadkih</span>
+                          <span className="text-sm font-medium text-gray-700">{t.wasteData || 'Waste data'}</span>
                         </div>
-                        <span className="text-xs text-gray-600">{wasteData.length} zapisov</span>
+                        <span className="text-xs text-gray-600">{wasteData.length} {t.records || 'records'}</span>
                       </div>
                     )}
                   </div>
@@ -1147,17 +1147,17 @@ const BakeryPlanningSystem = () => {
               
               {(!fileStatus.hourly || !fileStatus.daily || !fileStatus.waste) && (
                 <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <p className="text-sm text-yellow-800 font-semibold mb-3">📂 Manjkajoče datoteke - dodaj jih:</p>
+                  <p className="text-sm text-yellow-800 font-semibold mb-3">📂 {t.missingFiles || 'Missing files - add them'}:</p>
                   <div className="space-y-2">
                     {!fileStatus.hourly && (
                       <div className="flex items-center justify-between bg-white rounded px-3 py-2">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-gray-700">Urna prodaja</span>
+                          <span className="text-sm font-medium text-gray-700">{t.hourlySales || 'Hourly sales'}</span>
                         </div>
                         <label>
                           <input type="file" accept=".xlsx,.xls" onChange={(e) => handleFileUpload(e, 'hourly')} className="hidden" />
-                          <span className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded cursor-pointer">Dodaj datoteko</span>
+                          <span className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded cursor-pointer">{t.addFile || 'Add file'}</span>
                         </label>
                       </div>
                     )}
@@ -1165,11 +1165,11 @@ const BakeryPlanningSystem = () => {
                       <div className="flex items-center justify-between bg-white rounded px-3 py-2">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          <span className="text-sm font-medium text-gray-700">Dnevna prodaja</span>
+                          <span className="text-sm font-medium text-gray-700">{t.dailySales || 'Daily sales'}</span>
                         </div>
                         <label>
                           <input type="file" accept=".xlsx,.xls" onChange={(e) => handleFileUpload(e, 'daily')} className="hidden" />
-                          <span className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded cursor-pointer">Dodaj datoteko</span>
+                          <span className="text-xs bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded cursor-pointer">{t.addFile || 'Add file'}</span>
                         </label>
                       </div>
                     )}
@@ -1177,11 +1177,11 @@ const BakeryPlanningSystem = () => {
                       <div className="flex items-center justify-between bg-white rounded px-3 py-2">
                         <div className="flex items-center gap-2">
                           <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                          <span className="text-sm font-medium text-gray-700">Odpadki (neobvezno)</span>
+                          <span className="text-sm font-medium text-gray-700">{t.wasteOptional || 'Waste (optional)'}</span>
                         </div>
                         <label>
                           <input type="file" accept=".xlsx,.xls" onChange={(e) => handleFileUpload(e, 'waste')} className="hidden" />
-                          <span className="text-xs bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded cursor-pointer">Dodaj datoteko</span>
+                          <span className="text-xs bg-gray-400 hover:bg-gray-500 text-white px-3 py-1 rounded cursor-pointer">{t.addFile || 'Add file'}</span>
                         </label>
                       </div>
                     )}
@@ -1190,10 +1190,10 @@ const BakeryPlanningSystem = () => {
               )}
 
               <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-sm text-blue-800 font-semibold mb-2">🤖 Inteligentno prepoznavanje datotek</p>
+                <p className="text-sm text-blue-800 font-semibold mb-2">🤖 {t.smartFileRecognition || 'Smart file recognition'}</p>
                 <ul className="text-sm text-blue-700 space-y-1 list-disc list-inside">
-                  <li>Sistem samodejno prepozna vrste datotek po vsebini</li>
-                  <li>Spusti vse datoteke hkrati ali dodaj manjkajoče kasneje</li>
+                  <li>{t.systemAutoDetects || 'System automatically detects file types by content'}</li>
+                  <li>{t.dropAllFiles || 'Drop all files at once or add missing files later'}</li>
                 </ul>
               </div>
             </>
@@ -1209,12 +1209,12 @@ const BakeryPlanningSystem = () => {
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
           <div className="flex items-center gap-3 mb-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
-            <h3 className="text-2xl font-bold text-red-800">Napaka</h3>
+            <h3 className="text-2xl font-bold text-red-800">{t.error || 'Error'}</h3>
           </div>
           <p className="text-red-700 mb-6">{error}</p>
           <button onClick={() => { setError(null); setShowUpload(true); }}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-lg font-semibold">
-            Naloži datoteke
+            {t.uploadFiles || 'Upload files'}
           </button>
         </div>
       </div>
@@ -1604,10 +1604,10 @@ const BakeryPlanningSystem = () => {
                               ? 'bg-green-600 hover:bg-green-700'
                               : 'bg-blue-600 hover:bg-blue-700'
                           }`}
-                          title="Uredi količino"
+                          title={t.editQuantity || 'Edit quantity'}
                         >
                           <Edit3 className="w-3 h-3" />
-                          Uredi
+                          {t.edit || 'Edit'}
                         </button>
                       </td>
                     </tr>
@@ -1616,7 +1616,7 @@ const BakeryPlanningSystem = () => {
               </tbody>
               <tfoot>
                 <tr className="bg-gray-100 font-bold border-t-2 border-gray-300">
-                  <td className="px-3 py-3">SKUPAJ</td>
+                  <td className="px-3 py-3">{t.total || 'TOTAL'}</td>
                   <td className="px-2 py-3 text-right text-green-700">{getTotalPlanned(1)}</td>
                   {showBuffers && <td className="px-2 py-3"></td>}
                   <td className="px-2 py-3 text-right text-blue-700">{getTotalPlanned(2)}</td>
@@ -1637,12 +1637,12 @@ const BakeryPlanningSystem = () => {
           {/* Trays View */}
           {activeTab === 'trays' && (
             <div className="space-y-6 print:space-y-0">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 print:hidden">Optimizacija pladenj - {selectedDate}</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4 print:hidden">{t.trayOptimization || 'Tray optimization'} - {selectedDate}</h2>
 
               <div className="space-y-4 print:space-y-0">
                 <div className="bg-green-50 border-2 border-green-300 rounded-lg print:bg-white print:border-0 print:p-0" data-wave-container="1">
                   <div className="flex items-center justify-between p-4 print:hidden cursor-pointer hover:bg-green-100 transition-colors" onClick={() => toggleWave(1)}>
-                    <h3 className="text-lg font-bold text-green-800">Val 1 (7-12)</h3>
+                    <h3 className="text-lg font-bold text-green-800">{t.wave || 'Wave'} 1 (7-12)</h3>
                     {expandedWaves[1] ? <ChevronUp className="w-6 h-6 text-green-800" /> : <ChevronDown className="w-6 h-6 text-green-800" />}
                   </div>
                   <div className={expandedWaves[1] ? "px-4 pb-4 print:block print:p-0" : "hidden print:block print:p-0"}>
@@ -1657,7 +1657,7 @@ const BakeryPlanningSystem = () => {
 
                 <div className="bg-blue-50 border-2 border-blue-300 rounded-lg print:bg-white print:border-0 print:p-0" data-wave-container="2">
                   <div className="flex items-center justify-between p-4 print:hidden cursor-pointer hover:bg-blue-100 transition-colors" onClick={() => toggleWave(2)}>
-                    <h3 className="text-lg font-bold text-blue-800">Val 2 (12-16)</h3>
+                    <h3 className="text-lg font-bold text-blue-800">{t.wave || 'Wave'} 2 (12-16)</h3>
                     {expandedWaves[2] ? <ChevronUp className="w-6 h-6 text-blue-800" /> : <ChevronDown className="w-6 h-6 text-blue-800" />}
                   </div>
                   <div className={expandedWaves[2] ? "px-4 pb-4 print:block print:p-0" : "hidden print:block print:p-0"}>
@@ -1672,7 +1672,7 @@ const BakeryPlanningSystem = () => {
 
                 <div className="bg-orange-50 border-2 border-orange-300 rounded-lg print:bg-white print:border-0 print:p-0" data-wave-container="3">
                   <div className="flex items-center justify-between p-4 print:hidden cursor-pointer hover:bg-orange-100 transition-colors" onClick={() => toggleWave(3)}>
-                    <h3 className="text-lg font-bold text-orange-800">Val 3 (16-20)</h3>
+                    <h3 className="text-lg font-bold text-orange-800">{t.wave || 'Wave'} 3 (16-20)</h3>
                     {expandedWaves[3] ? <ChevronUp className="w-6 h-6 text-orange-800" /> : <ChevronDown className="w-6 h-6 text-orange-800" />}
                   </div>
                   <div className={expandedWaves[3] ? "px-4 pb-4 print:block print:p-0" : "hidden print:block print:p-0"}>
@@ -1691,7 +1691,7 @@ const BakeryPlanningSystem = () => {
           {/* Metrics View */}
           {activeTab === 'metrics' && (
             <div>
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Metrike uspešnosti - {selectedDate}</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">{t.performanceMetrics || 'Performance metrics'} - {selectedDate}</h2>
               <MetricsDashboard
                 products={products}
                 selectedDate={selectedDate}
@@ -1707,36 +1707,36 @@ const BakeryPlanningSystem = () => {
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md mx-4">
             <div className="flex items-center gap-3 mb-4">
               <AlertCircle className="w-8 h-8 text-yellow-600" />
-              <h3 className="text-xl font-bold text-gray-800">Potrdi spremembo datuma</h3>
+              <h3 className="text-xl font-bold text-gray-800">{t.confirmDateChange || 'Confirm date change'}</h3>
             </div>
             <p className="text-gray-700 mb-4">
-              Sprememba datuma bo ponastavila vse načrte proizvodnje.
+              {t.dateChangeWarning || 'Changing the date will reset all production plans.'}
             </p>
             <div className="bg-gray-50 rounded p-3 mb-4 space-y-1">
               <div className="text-sm">
-                <span className="text-gray-600">Trenutni datum:</span>
+                <span className="text-gray-600">{t.currentDate || 'Current date'}:</span>
                 <span className="font-bold text-gray-800 ml-2">{previousDateRef.current}</span>
               </div>
               <div className="text-sm">
-                <span className="text-gray-600">Nov datum:</span>
+                <span className="text-gray-600">{t.newDate || 'New date'}:</span>
                 <span className="font-bold text-blue-600 ml-2">{pendingDate}</span>
               </div>
             </div>
             <p className="text-sm text-gray-600 mb-6">
-              Ali ste prepričani, da želite nadaljevati?
+              {t.areYouSure || 'Are you sure you want to continue?'}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={cancelDateChange}
                 className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold transition-colors"
               >
-                Prekliči
+                {t.cancel || 'Cancel'}
               </button>
               <button
                 onClick={confirmDateChange}
                 className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
               >
-                Ponastavi in spremeni
+                {t.resetAndChange || 'Reset and change'}
               </button>
             </div>
           </div>
@@ -1825,7 +1825,7 @@ const BakeryPlanningSystem = () => {
                 onClick={() => setShowResetModal(false)}
                 className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold transition-colors"
               >
-                Prekliči
+                {t.cancel || 'Cancel'}
               </button>
               <button
                 onClick={() => {
@@ -1886,7 +1886,7 @@ const BakeryPlanningSystem = () => {
                 }}
                 className="flex-1 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-semibold transition-colors"
               >
-                Prekliči
+                {t.cancel || 'Cancel'}
               </button>
               <button
                 onClick={handleInstallSubmit}

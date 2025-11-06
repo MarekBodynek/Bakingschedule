@@ -184,7 +184,66 @@ export const translations = {
     polish: 'Polski',
     english: 'English',
     croatian: 'Hrvatski',
-    slovenian: 'Slovenščina'
+    slovenian: 'Slovenščina',
+
+    // Dodatkowe klucze - Optymalizacja tac
+    wave1Name: 'Fala poranna',
+    wave2Name: 'Fala południowa',
+    wave3Name: 'Fala wieczorna',
+    noPlanForOptimization: 'Brak planu optymalizacji',
+    generatePlanFirst: 'Najpierw wygeneruj plan pieczenia',
+    bakingPlan: 'Plan pieczenia',
+    productsArrangedByPriority: 'Produkty ułożone według priorytetu - najpopularniejsze pierwsze',
+    ovens: 'Piece',
+    traysTotal: 'tac razem',
+    minutesTotal: 'minut razem',
+    printSchedule: 'Drukuj harmonogram pieczenia',
+    pcs: 'szt',
+    piecesOn: 'sztuk na',
+    trays: 'tacach',
+
+    // Upload plików
+    uploadSalesData: 'Wgraj dane o sprzedaży',
+    dragDropFiles: 'Przeciągnij i upuść pliki Excel tutaj lub kliknij, aby wybrać',
+    selectFiles: 'Wybierz pliki',
+    uploadedFiles: 'Wgrane pliki',
+    hourlySales: 'Sprzedaż godz.',
+    dailySales: 'Sprzedaż dzienna',
+    records: 'rekordów',
+    missingFiles: 'Brakujące pliki - dodaj je',
+    addFile: 'Dodaj plik',
+    wasteOptional: 'Odpady (opcjonalnie)',
+    smartFileRecognition: 'Inteligentne rozpoznawanie plików',
+    systemAutoDetects: 'System automatycznie rozpoznaje typy plików po zawartości',
+    dropAllFiles: 'Upuść wszystkie pliki naraz lub dodaj brakujące później',
+    error: 'Błąd',
+
+    // Edycja i akcje
+    editQuantity: 'Edytuj ilość',
+
+    // Metryki
+    performanceMetrics: 'Metryki wydajności',
+
+    // Zmiana daty
+    confirmDateChange: 'Potwierdź zmianę daty',
+    dateChangeWarning: 'Zmiana daty zresetuje wszystkie plany produkcji.',
+    currentDate: 'Aktualna data',
+    newDate: 'Nowa data',
+    areYouSure: 'Czy na pewno chcesz kontynuować?',
+    resetAndChange: 'Resetuj i zmień',
+
+    // Konfiguracja pieców
+    programName: 'Nazwa programu',
+    bakingTimeMinutes: 'Czas pieczenia (minuty)',
+    productsInProgram: 'Produktów w tym programie',
+    ovenSettings: '3. Ustawienia pieców',
+    addOven: 'Dodaj piec',
+    ovenCapacityTrays: 'Piec - pojemność (tace)',
+    remove: 'Usuń',
+    individualOvens: 'Poszczególne piece',
+    oven: 'Piec',
+    totalCapacity: 'Całkowita pojemność',
+    traysAtOnce: 'tac naraz'
   },
 
   en: {
@@ -370,7 +429,66 @@ export const translations = {
     polish: 'Polski',
     english: 'English',
     croatian: 'Hrvatski',
-    slovenian: 'Slovenščina'
+    slovenian: 'Slovenščina',
+
+    // Additional keys - Tray optimization
+    wave1Name: 'Morning wave',
+    wave2Name: 'Midday wave',
+    wave3Name: 'Evening wave',
+    noPlanForOptimization: 'No optimization plan',
+    generatePlanFirst: 'Generate baking plan first',
+    bakingPlan: 'Baking plan',
+    productsArrangedByPriority: 'Products arranged by priority - most popular first',
+    ovens: 'Ovens',
+    traysTotal: 'trays total',
+    minutesTotal: 'minutes total',
+    printSchedule: 'Print baking schedule',
+    pcs: 'pcs',
+    piecesOn: 'pieces on',
+    trays: 'trays',
+
+    // File upload
+    uploadSalesData: 'Upload sales data',
+    dragDropFiles: 'Drag and drop Excel files here or click to select',
+    selectFiles: 'Select files',
+    uploadedFiles: 'Uploaded files',
+    hourlySales: 'Hourly sales',
+    dailySales: 'Daily sales',
+    records: 'records',
+    missingFiles: 'Missing files - add them',
+    addFile: 'Add file',
+    wasteOptional: 'Waste (optional)',
+    smartFileRecognition: 'Smart file recognition',
+    systemAutoDetects: 'System automatically detects file types by content',
+    dropAllFiles: 'Drop all files at once or add missing files later',
+    error: 'Error',
+
+    // Edit and actions
+    editQuantity: 'Edit quantity',
+
+    // Metrics
+    performanceMetrics: 'Performance metrics',
+
+    // Date change
+    confirmDateChange: 'Confirm date change',
+    dateChangeWarning: 'Changing the date will reset all production plans.',
+    currentDate: 'Current date',
+    newDate: 'New date',
+    areYouSure: 'Are you sure you want to continue?',
+    resetAndChange: 'Reset and change',
+
+    // Oven configuration
+    programName: 'Program name',
+    bakingTimeMinutes: 'Baking time (minutes)',
+    productsInProgram: 'Products in this program',
+    ovenSettings: '3. Oven settings',
+    addOven: 'Add oven',
+    ovenCapacityTrays: 'Oven - capacity (trays)',
+    remove: 'Remove',
+    individualOvens: 'Individual ovens',
+    oven: 'Oven',
+    totalCapacity: 'Total capacity',
+    traysAtOnce: 'trays at once'
   },
 
   hr: {
@@ -556,7 +674,66 @@ export const translations = {
     polish: 'Polski',
     english: 'English',
     croatian: 'Hrvatski',
-    slovenian: 'Slovenščina'
+    slovenian: 'Slovenščina',
+
+    // Dodatni ključevi - Optimizacija pladnjev
+    wave1Name: 'Jutarnji val',
+    wave2Name: 'Podnevni val',
+    wave3Name: 'Večernji val',
+    noPlanForOptimization: 'Nema plana za optimizaciju',
+    generatePlanFirst: 'Prvo generirajte plan pečenja',
+    bakingPlan: 'Plan pečenja',
+    productsArrangedByPriority: 'Proizvodi raspoređeni po prioritetu - najpopularniji prvi',
+    ovens: 'Pećnice',
+    traysTotal: 'pladnjev ukupno',
+    minutesTotal: 'minuta ukupno',
+    printSchedule: 'Ispis rasporeda pečenja',
+    pcs: 'kom',
+    piecesOn: 'komada na',
+    trays: 'pladnjima',
+
+    // Učitavanje datoteka
+    uploadSalesData: 'Učitaj podatke o prodaji',
+    dragDropFiles: 'Povucite i ispustite Excel datoteke ovdje ili kliknite za odabir',
+    selectFiles: 'Odaberi datoteke',
+    uploadedFiles: 'Učitane datoteke',
+    hourlySales: 'Satna prodaja',
+    dailySales: 'Dnevna prodaja',
+    records: 'zapisa',
+    missingFiles: 'Nedostajuće datoteke - dodajte ih',
+    addFile: 'Dodaj datoteku',
+    wasteOptional: 'Otpad (opciono)',
+    smartFileRecognition: 'Pametno prepoznavanje datoteka',
+    systemAutoDetects: 'Sustav automatski prepoznaje vrste datoteka prema sadržaju',
+    dropAllFiles: 'Ispustite sve datoteke odjednom ili dodajte nedostajuće kasnije',
+    error: 'Greška',
+
+    // Uređivanje i akcije
+    editQuantity: 'Uredi količinu',
+
+    // Metrike
+    performanceMetrics: 'Metrike učinka',
+
+    // Promjena datuma
+    confirmDateChange: 'Potvrdi promjenu datuma',
+    dateChangeWarning: 'Promjena datuma će resetirati sve planove proizvodnje.',
+    currentDate: 'Trenutni datum',
+    newDate: 'Novi datum',
+    areYouSure: 'Jeste li sigurni da želite nastaviti?',
+    resetAndChange: 'Resetiraj i promijeni',
+
+    // Konfiguracija pećnice
+    programName: 'Naziv programa',
+    bakingTimeMinutes: 'Vrijeme pečenja (minute)',
+    productsInProgram: 'Proizvodi u ovom programu',
+    ovenSettings: '3. Postavke pećnice',
+    addOven: 'Dodaj pećnicu',
+    ovenCapacityTrays: 'Pećnica - kapacitet (pladnjevi)',
+    remove: 'Ukloni',
+    individualOvens: 'Pojedinačne pećnice',
+    oven: 'Pećnica',
+    totalCapacity: 'Ukupni kapacitet',
+    traysAtOnce: 'pladnjev odjednom'
   },
 
   sl: {
@@ -742,7 +919,66 @@ export const translations = {
     polish: 'Polski',
     english: 'English',
     croatian: 'Hrvatski',
-    slovenian: 'Slovenščina'
+    slovenian: 'Slovenščina',
+
+    // Dodatni ključi - Optimizacija pladnjev
+    wave1Name: 'Jutranji val',
+    wave2Name: 'Opoldanski val',
+    wave3Name: 'Večerni val',
+    noPlanForOptimization: 'Ni načrta za optimizacijo',
+    generatePlanFirst: 'Najprej generirajte načrt peke',
+    bakingPlan: 'Načrt pečenja',
+    productsArrangedByPriority: 'Izdelki so razporejeni po prioriteti - najpopularnejši najprej',
+    ovens: 'Pečice',
+    traysTotal: 'pladnjev skupaj',
+    minutesTotal: 'minut skupaj',
+    printSchedule: 'Natisni harmonogram peke',
+    pcs: 'kos',
+    piecesOn: 'kosov na',
+    trays: 'pladnjih',
+
+    // Nalaganje datotek
+    uploadSalesData: 'Naloži podatke o prodaji',
+    dragDropFiles: 'Povleci in spusti Excel datoteke sem ali klikni za izbiro',
+    selectFiles: 'Izberi datoteke',
+    uploadedFiles: 'Naložene datoteke',
+    hourlySales: 'Urna prodaja',
+    dailySales: 'Dnevna prodaja',
+    records: 'zapisov',
+    missingFiles: 'Manjkajoče datoteke - dodaj jih',
+    addFile: 'Dodaj datoteko',
+    wasteOptional: 'Odpadki (neobvezno)',
+    smartFileRecognition: 'Inteligentno prepoznavanje datotek',
+    systemAutoDetects: 'Sistem samodejno prepozna vrste datotek po vsebini',
+    dropAllFiles: 'Spusti vse datoteke hkrati ali dodaj manjkajoče kasneje',
+    error: 'Napaka',
+
+    // Urejanje in akcije
+    editQuantity: 'Uredi količino',
+
+    // Metrike
+    performanceMetrics: 'Metrike uspešnosti',
+
+    // Sprememba datuma
+    confirmDateChange: 'Potrdi spremembo datuma',
+    dateChangeWarning: 'Sprememba datuma bo ponastavila vse načrte proizvodnje.',
+    currentDate: 'Trenutni datum',
+    newDate: 'Nov datum',
+    areYouSure: 'Ali ste prepričani, da želite nadaljevati?',
+    resetAndChange: 'Ponastavi in spremeni',
+
+    // Konfiguracija pečice
+    programName: 'Ime programa',
+    bakingTimeMinutes: 'Čas pečenja (minute)',
+    productsInProgram: 'Izdelkov v tem programu',
+    ovenSettings: '3. Nastavitve pečice',
+    addOven: 'Dodaj pečico',
+    ovenCapacityTrays: 'Pečica - kapaciteta (pladnji)',
+    remove: 'Odstrani',
+    individualOvens: 'Posamezne pečice',
+    oven: 'Pečica',
+    totalCapacity: 'Skupna kapaciteta',
+    traysAtOnce: 'pladnjev naenkrat'
   }
 };
 

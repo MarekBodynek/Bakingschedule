@@ -391,12 +391,12 @@ const OvenConfigurationModal = ({
                 {programs.map(programNum => (
                   <div key={programNum} className="border rounded-lg p-4 bg-gray-50">
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Program {programNum}
+                      {translations?.program || 'Program'} {programNum}
                     </label>
 
                     <div className="space-y-3">
                       <div>
-                        <label className="block text-xs text-gray-600 mb-1">Naziv programa</label>
+                        <label className="block text-xs text-gray-600 mb-1">{translations?.programName || 'Program name'}</label>
                         <input
                           type="text"
                           value={programConfig[programNum]?.name || ''}
@@ -408,7 +408,7 @@ const OvenConfigurationModal = ({
 
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">
-                          Čas pečenja (minute)
+                          {translations?.bakingTimeMinutes || 'Baking time (minutes)'}
                         </label>
                         <input
                           type="number"
@@ -422,7 +422,7 @@ const OvenConfigurationModal = ({
                       </div>
 
                       <div className="text-xs text-gray-500">
-                        Izdelkov v tem programu: {productConfig.filter(p => p.program === programNum).length}
+                        {translations?.productsInProgram || 'Products in this program'}: {productConfig.filter(p => p.program === programNum).length}
                       </div>
                     </div>
                   </div>
@@ -435,7 +435,7 @@ const OvenConfigurationModal = ({
           {programs.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-800">3. Nastavi pečice v trgovini</h3>
+                <h3 className="text-lg font-semibold text-gray-800">{translations?.ovenSettings || '3. Oven settings'}</h3>
                 <button
                   onClick={() => {
                     const newCapacities = [...(ovenSettings.individualCapacities || []), 4];
@@ -447,7 +447,7 @@ const OvenConfigurationModal = ({
                   }}
                   className="px-3 py-1 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-semibold"
                 >
-                  + Dodaj pečico
+                  + {translations?.addOven || 'Add oven'}
                 </button>
               </div>
 
@@ -462,7 +462,7 @@ const OvenConfigurationModal = ({
                     </div>
                     <div className="flex-1">
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        {idx + 1}. pečica - kapaciteta (pladnji)
+                        {idx + 1}. {translations?.ovenCapacityTrays || 'Oven - capacity (trays)'}
                       </label>
                       <input
                         type="number"
@@ -494,7 +494,7 @@ const OvenConfigurationModal = ({
                         }}
                         className="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm font-semibold flex-shrink-0"
                       >
-                        Odstrani
+                        {translations?.remove || 'Remove'}
                       </button>
                     )}
                   </div>
@@ -505,19 +505,19 @@ const OvenConfigurationModal = ({
                 {ovenSettings.individualCapacities && ovenSettings.individualCapacities.length > 0 ? (
                   <>
                     <p className="text-sm text-blue-800">
-                      <strong>Posamezne pečice:</strong> {ovenSettings.individualCapacities.map((cap, idx) =>
-                        `Pečica ${idx + 1}: ${cap} pladnjev`
+                      <strong>{translations?.individualOvens || 'Individual ovens'}:</strong> {ovenSettings.individualCapacities.map((cap, idx) =>
+                        `${translations?.oven || 'Oven'} ${idx + 1}: ${cap} ${translations?.trays || 'trays'}`
                       ).join(' • ')}
                     </p>
                     <p className="text-sm text-blue-800">
-                      <strong>Skupna kapaciteta:</strong> {ovenSettings.individualCapacities.join(' + ')} =
-                      <strong className="ml-1">{ovenSettings.ovenCapacity} pladnjev skupaj</strong>
+                      <strong>{translations?.totalCapacity || 'Total capacity'}:</strong> {ovenSettings.individualCapacities.join(' + ')} =
+                      <strong className="ml-1">{ovenSettings.ovenCapacity} {translations?.traysTotal || 'trays total'}</strong>
                     </p>
                   </>
                 ) : (
                   <p className="text-sm text-blue-800">
-                    <strong>Skupna kapaciteta:</strong> {ovenSettings.ovenCount} pečic × {ovenSettings.ovenCapacity} pladnjev =
-                    <strong className="ml-1">{ovenSettings.ovenCount * ovenSettings.ovenCapacity} pladnjev na enkrat</strong>
+                    <strong>{translations?.totalCapacity || 'Total capacity'}:</strong> {ovenSettings.ovenCount} {translations?.ovens || 'ovens'} × {ovenSettings.ovenCapacity} {translations?.trays || 'trays'} =
+                    <strong className="ml-1">{ovenSettings.ovenCount * ovenSettings.ovenCapacity} {translations?.traysAtOnce || 'trays at once'}</strong>
                   </p>
                 )}
               </div>
