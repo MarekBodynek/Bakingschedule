@@ -288,18 +288,19 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
             </thead>
             <tbody>
               {allTrays.map((tray, index) => (
+                <>
                 <tr
                   key={tray.id}
-                  className={`border-b-8 border-blue-400 hover:bg-blue-50 transition-colors ${
+                  className={`hover:bg-blue-50 transition-colors ${
                     tray.product.isKey ? 'bg-yellow-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                   }`}
                 >
-                  <td className="px-4 py-5">
+                  <td className="px-4 py-6">
                     <div className="w-10 h-10 rounded bg-blue-600 text-white flex items-center justify-center font-bold">
                       {tray.id}
                     </div>
                   </td>
-                  <td className="px-4 py-5">
+                  <td className="px-4 py-6">
                     <div className="font-semibold text-gray-800">
                       {tray.product.name}
                       {tray.product.isKey && (
@@ -309,13 +310,18 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
                       )}
                     </div>
                   </td>
-                  <td className="px-4 py-5 text-sm text-gray-600">{tray.product.sku}</td>
-                  <td className="px-4 py-5 text-sm text-gray-600">{tray.programName}</td>
-                  <td className="px-4 py-5 text-right">
+                  <td className="px-4 py-6 text-sm text-gray-600">{tray.product.sku}</td>
+                  <td className="px-4 py-6 text-sm text-gray-600">{tray.programName}</td>
+                  <td className="px-4 py-6 text-right">
                     <span className="text-2xl font-bold text-blue-600">{tray.quantity}</span>
                     <span className="text-sm text-gray-600 ml-1">{t.pcs || 'pcs'}</span>
                   </td>
                 </tr>
+                {/* Separator between trays */}
+                <tr key={`sep-${tray.id}`} className="h-2 bg-blue-500">
+                  <td colSpan="5" className="p-0"></td>
+                </tr>
+                </>
               ))}
             </tbody>
           </table>
