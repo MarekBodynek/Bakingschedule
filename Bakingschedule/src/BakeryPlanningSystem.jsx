@@ -1502,17 +1502,17 @@ const BakeryPlanningSystem = () => {
             <table className="w-full">
               <thead>
                 <tr className="border-b-2 border-gray-300">
-                  <th className="px-3 py-2 text-left font-bold text-gray-700 sticky left-0 bg-white">Izdelek</th>
-                  <th className="px-2 py-2 text-right font-bold text-green-700">Val 1<br/><span className="text-xs font-normal">7-12</span></th>
+                  <th className="px-3 py-2 text-left font-bold text-gray-700 sticky left-0 bg-white">{t.product}</th>
+                  <th className="px-2 py-2 text-right font-bold text-green-700">{t.wave} 1<br/><span className="text-xs font-normal">7-12</span></th>
                   {showBuffers && <th className="px-2 py-2 text-right font-bold text-green-600">Buf 1<br/><span className="text-xs font-normal">%</span></th>}
-                  <th className="px-2 py-2 text-right font-bold text-blue-700">Val 2<br/><span className="text-xs font-normal">12-16</span></th>
+                  <th className="px-2 py-2 text-right font-bold text-blue-700">{t.wave} 2<br/><span className="text-xs font-normal">12-16</span></th>
                   {showBuffers && <th className="px-2 py-2 text-right font-bold text-blue-600">Buf 2<br/><span className="text-xs font-normal">%</span></th>}
-                  <th className="px-2 py-2 text-right font-bold text-orange-700">Val 3<br/><span className="text-xs font-normal">16-20</span></th>
+                  <th className="px-2 py-2 text-right font-bold text-orange-700">{t.wave} 3<br/><span className="text-xs font-normal">16-20</span></th>
                   {showBuffers && <th className="px-2 py-2 text-right font-bold text-orange-600">Buf 3<br/><span className="text-xs font-normal">%</span></th>}
-                  <th className="px-2 py-2 text-right font-bold text-gray-700">Dnevno<br/><span className="text-xs font-normal">Skupaj</span></th>
-                  <th className="px-2 py-2 text-right font-bold text-gray-600">Zgo</th>
-                  <th className="px-2 py-2 text-left font-bold text-gray-600">Opombe</th>
-                  <th className="px-2 py-2 text-center font-bold text-gray-600 no-print">Akcije</th>
+                  <th className="px-2 py-2 text-right font-bold text-gray-700">{t.daily}<br/><span className="text-xs font-normal">{t.total}</span></th>
+                  <th className="px-2 py-2 text-right font-bold text-gray-600">{t.historical}</th>
+                  <th className="px-2 py-2 text-left font-bold text-gray-600">{t.notes}</th>
+                  <th className="px-2 py-2 text-center font-bold text-gray-600 no-print">{t.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1544,11 +1544,11 @@ const BakeryPlanningSystem = () => {
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-gray-800 text-sm">{product.name}</span>
-                            {product.isKey && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded">KLJUČNO</span>}
-                            {product.isPackaged && <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-bold">{product.packageQuantity}x PAK</span>}
+                            {product.isKey && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded">{t.keyProduct}</span>}
+                            {product.isPackaged && <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-bold">{product.packageQuantity}x {t.package}</span>}
                           </div>
                           {product.isPackaged && (
-                            <span className="text-xs text-red-600 font-semibold">⚠️ Količina za peko v kosih</span>
+                            <span className="text-xs text-red-600 font-semibold">{t.quantityInPieces}</span>
                           )}
                         </div>
                       </td>

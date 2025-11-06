@@ -65,6 +65,9 @@ export const translations = {
     showBuffers: 'Pokaż bufory',
     hideBuffers: 'Ukryj bufory',
     print: 'Drukuj',
+    keyProduct: 'KLUCZOWY',
+    package: 'PAK',
+    quantityInPieces: '⚠️ Ilość do pieczenia w sztukach',
 
     // Modal konfiguracji
     configTitle: '⚙️ Konfiguracja piecy',
@@ -248,6 +251,9 @@ export const translations = {
     showBuffers: 'Show buffers',
     hideBuffers: 'Hide buffers',
     print: 'Print',
+    keyProduct: 'KEY',
+    package: 'PACK',
+    quantityInPieces: '⚠️ Quantity for baking in pieces',
 
     // Configuration modal
     configTitle: '⚙️ Oven Configuration',
@@ -431,6 +437,9 @@ export const translations = {
     showBuffers: 'Prikaži buffere',
     hideBuffers: 'Sakrij buffere',
     print: 'Ispiši',
+    keyProduct: 'KLJUČNO',
+    package: 'PAK',
+    quantityInPieces: '⚠️ Količina za pečenje u komadima',
 
     // Modal konfiguracije
     configTitle: '⚙️ Konfiguracija pećnice',
@@ -614,6 +623,9 @@ export const translations = {
     showBuffers: 'Prikaži bufferje',
     hideBuffers: 'Skrij bufferje',
     print: 'Natisni',
+    keyProduct: 'KLJUČNO',
+    package: 'PAK',
+    quantityInPieces: '⚠️ Količina za peko v kosih',
 
     // Modal konfiguracije
     configTitle: '⚙️ Konfiguracija pečice',
