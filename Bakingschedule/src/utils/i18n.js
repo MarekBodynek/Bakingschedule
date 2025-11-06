@@ -24,6 +24,15 @@ export const translations = {
     reset: '🔄 Reset',
     installApp: '📱 Zainstaluj lokalnie',
 
+    // Reset modal
+    resetPlans: 'Wyczyść plany',
+    resetDescription: 'Ta operacja usunie tylko wygenerowane plany:',
+    resetItem1: 'Wszystkie plany produkcji',
+    resetItem2: 'Korekty i dostosowania',
+    resetItem3: 'Metryki i statystyki',
+    resetPreserved: 'Zachowane zostaną: Konfiguracja pieców, programy i wgrane dane',
+    resetConfirm: 'Czy chcesz wyczyścić plany?',
+
     // Fale
     wave1: 'Fala 1',
     wave2: 'Fala 2',
@@ -197,6 +206,15 @@ export const translations = {
     ovenConfig: '⚙️ Configuration',
     reset: '🔄 Reset',
     installApp: '📱 Install Locally',
+
+    // Reset modal
+    resetPlans: 'Clear Plans',
+    resetDescription: 'This operation will delete only generated plans:',
+    resetItem1: 'All production plans',
+    resetItem2: 'Corrections and adjustments',
+    resetItem3: 'Metrics and statistics',
+    resetPreserved: 'Preserved: Oven configuration, programs and uploaded data',
+    resetConfirm: 'Do you want to clear the plans?',
 
     // Waves
     wave1: 'Wave 1',
@@ -372,6 +390,15 @@ export const translations = {
     reset: '🔄 Resetiraj',
     installApp: '📱 Instaliraj lokalno',
 
+    // Reset modal
+    resetPlans: 'Očisti planove',
+    resetDescription: 'Ova operacija će izbrisati samo generirane planove:',
+    resetItem1: 'Sve planove proizvodnje',
+    resetItem2: 'Ispravke i prilagodbe',
+    resetItem3: 'Metrike i statistike',
+    resetPreserved: 'Sačuvano: Konfiguracija pećnice, programi i učitani podaci',
+    resetConfirm: 'Želite li očistiti planove?',
+
     // Valovi
     wave1: 'Val 1',
     wave2: 'Val 2',
@@ -545,6 +572,15 @@ export const translations = {
     ovenConfig: '⚙️ Konfiguracija',
     reset: '🔄 Reset',
     installApp: '📱 Namesti lokalno',
+
+    // Reset modal
+    resetPlans: 'Počisti načrte',
+    resetDescription: 'Ta operacija bo izbrisala samo generirane načrte:',
+    resetItem1: 'Vse načrte proizvodnje',
+    resetItem2: 'Korekture in prilagoditve',
+    resetItem3: 'Metrike in statistike',
+    resetPreserved: 'Ohranjeno: Konfiguracija pečic, programi in naloženi podatki',
+    resetConfirm: 'Ali želite počistiti načrte?',
 
     // Valovi
     wave1: 'Val 1',

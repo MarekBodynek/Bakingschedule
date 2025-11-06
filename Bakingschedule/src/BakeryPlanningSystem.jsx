@@ -20,7 +20,8 @@ import {
   saveActualWaste,
   exportAllData,
   importAllData,
-  clearAllData
+  clearAllData,
+  clearGeneratedPlans
 } from './utils/localStorage';
 
 import {
@@ -1800,26 +1801,24 @@ const BakeryPlanningSystem = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md mx-4">
             <div className="flex items-center gap-3 mb-4">
-              <AlertCircle className="w-8 h-8 text-red-600" />
-              <h3 className="text-xl font-bold text-gray-800">Ponastavitev aplikacije</h3>
+              <AlertCircle className="w-8 h-8 text-orange-600" />
+              <h3 className="text-xl font-bold text-gray-800">{t.resetPlans || 'Počisti načrte'}</h3>
             </div>
             <p className="text-gray-700 mb-4">
-              Ta operacija bo izbrisala <strong>vse podatke</strong> iz aplikacije:
+              {t.resetDescription || 'Ta operacija bo izbrisala samo wygenerowane načrte:'}
             </p>
             <ul className="list-disc list-inside text-sm text-gray-600 mb-4 space-y-1">
-              <li>Vse načrte proizvodnje</li>
-              <li>Korekture in prilagoditve</li>
-              <li>Metrike in statistike</li>
-              <li>Konfiguracijo pečic in programov</li>
-              <li>Naložene podatkovne datoteke</li>
+              <li>{t.resetItem1 || 'Vse načrte proizvodnje'}</li>
+              <li>{t.resetItem2 || 'Korekture in prilagoditve'}</li>
+              <li>{t.resetItem3 || 'Metrike in statistike'}</li>
             </ul>
-            <div className="bg-red-50 border border-red-200 rounded p-3 mb-4">
-              <p className="text-sm text-red-800 font-semibold">
-                ⚠️ Ta operacija je <strong>nepovratna</strong>. Priporočamo, da najprej ustvarite varnostno kopijo.
+            <div className="bg-green-50 border border-green-200 rounded p-3 mb-4">
+              <p className="text-sm text-green-800 font-semibold">
+                ✓ {t.resetPreserved || 'Ohranjena bodo: Konfiguracija pečic, programi in naloženi podatki'}
               </p>
             </div>
             <p className="text-sm text-gray-600 mb-6">
-              Ali ste prepričani, da želite ponastaviti aplikacijo na začetno stanje?
+              {t.resetConfirm || 'Ali želite počistiti načrte?'}
             </p>
             <div className="flex gap-3">
               <button
@@ -1830,13 +1829,15 @@ const BakeryPlanningSystem = () => {
               </button>
               <button
                 onClick={() => {
-                  clearAllData();
-                  console.log('🔄 Application reset to initial state');
-                  window.location.reload();
+                  clearGeneratedPlans();
+                  // Zresetuj tylko state planów, zachowaj dane i konfigurację
+                  setPlans({ 1: {}, 2: {}, 3: {} });
+                  setShowResetModal(false);
+                  console.log('🔄 Generated plans cleared (data and configuration preserved)');
                 }}
                 className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold transition-colors"
               >
-                Ponastavi vse
+                {t.reset || 'Ponastavi'}
               </button>
             </div>
           </div>

@@ -450,6 +450,29 @@ export const importAllData = (data) => {
 };
 
 /**
+ * Czyści tylko wygenerowane plany, zachowując konfigurację i dane wejściowe
+ */
+export const clearGeneratedPlans = () => {
+  // Usuń tylko klucze związane z wygenerowanymi planami
+  const keysToRemove = [
+    STORAGE_KEYS.PLANS,
+    STORAGE_KEYS.CORRECTIONS,
+    STORAGE_KEYS.ML_WEIGHTS,
+    STORAGE_KEYS.METRICS,
+    STORAGE_KEYS.STOCKOUTS,
+    STORAGE_KEYS.ACTUAL_SALES,
+    STORAGE_KEYS.ACTUAL_WASTE
+  ];
+
+  keysToRemove.forEach(key => {
+    localStorage.removeItem(key);
+  });
+
+  console.log('🗑️ Generated plans cleared (configuration and input data preserved)');
+  return true;
+};
+
+/**
  * Czyści wszystkie dane (UWAGA: nieodwracalne!)
  */
 export const clearAllData = () => {
@@ -457,6 +480,8 @@ export const clearAllData = () => {
     Object.values(STORAGE_KEYS).forEach(key => {
       localStorage.removeItem(key);
     });
+    // Usuń również klucz języka
+    localStorage.removeItem('appLanguage');
     console.log('🗑️ All data cleared');
     return true;
   }
