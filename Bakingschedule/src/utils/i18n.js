@@ -232,6 +232,13 @@ export const translations = {
     areYouSure: 'Czy na pewno chcesz kontynuować?',
     resetAndChange: 'Resetuj i zmień',
 
+    // Błędy plików
+    fileErrorMissingColumns: 'Błąd: Plik nie zawiera wymaganych kolumn',
+    fileRequiredColumns: 'Wymagane kolumny',
+    fileFoundColumns: 'Znalezione kolumny',
+    fileMissingColumns: 'Brakujące kolumny',
+    fileCheckFormat: 'Sprawdź format pliku. Plik powinien zawierać kolumny: DATUM, EANCODA, NAZIV, KOLIČINA',
+
     // Konfiguracja pieców
     programName: 'Nazwa programu',
     bakingTimeMinutes: 'Czas pieczenia (minuty)',
@@ -476,6 +483,13 @@ export const translations = {
     newDate: 'New date',
     areYouSure: 'Are you sure you want to continue?',
     resetAndChange: 'Reset and change',
+
+    // File errors
+    fileErrorMissingColumns: 'Error: File is missing required columns',
+    fileRequiredColumns: 'Required columns',
+    fileFoundColumns: 'Found columns',
+    fileMissingColumns: 'Missing columns',
+    fileCheckFormat: 'Check file format. File should contain columns: DATUM, EANCODA, NAZIV, KOLIČINA',
 
     // Oven configuration
     programName: 'Program name',
@@ -722,6 +736,13 @@ export const translations = {
     areYouSure: 'Jeste li sigurni da želite nastaviti?',
     resetAndChange: 'Resetiraj i promijeni',
 
+    // Greške datoteka
+    fileErrorMissingColumns: 'Greška: Datoteka ne sadrži potrebne stupce',
+    fileRequiredColumns: 'Potrebni stupci',
+    fileFoundColumns: 'Pronađeni stupci',
+    fileMissingColumns: 'Nedostajući stupci',
+    fileCheckFormat: 'Provjerite format datoteke. Datoteka treba sadržavati stupce: DATUM, EANCODA, NAZIV, KOLIČINA',
+
     // Konfiguracija pećnice
     programName: 'Naziv programa',
     bakingTimeMinutes: 'Vrijeme pečenja (minute)',
@@ -966,6 +987,13 @@ export const translations = {
     newDate: 'Nov datum',
     areYouSure: 'Ali ste prepričani, da želite nadaljevati?',
     resetAndChange: 'Ponastavi in spremeni',
+
+    // Napake datotek
+    fileErrorMissingColumns: 'Napaka: Datoteka ne vsebuje zahtevanih stolpcev',
+    fileRequiredColumns: 'Zahtevani stolpci',
+    fileFoundColumns: 'Najdeni stolpci',
+    fileMissingColumns: 'Manjkajoči stolpci',
+    fileCheckFormat: 'Preverite format datoteke. Datoteka mora vsebovati stolpce: DATUM, EANCODA, NAZIV, KOLIČINA',
 
     // Konfiguracija pečice
     programName: 'Ime programa',

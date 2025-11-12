@@ -21,7 +21,7 @@ function wrapRaw(fn) {
 
 	// Preserve .conversion property if there is one
 	if ('conversion' in fn) {
-		wrappedFn.conversion = fn.conversion;
+		wrappedFntak.conversion = fn.conversion;
 	}
 
 	return wrappedFn;

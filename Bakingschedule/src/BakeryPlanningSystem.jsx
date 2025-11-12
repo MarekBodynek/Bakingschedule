@@ -220,25 +220,34 @@ const BakeryPlanningSystem = () => {
       const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
       const firstRows = rawData.slice(0, 10).flat().join(' ').toUpperCase();
-      
+
+      // Rozpoznawanie plików ODPISI/LOSES (straty)
       if (firstRows.includes('ODPISI') || firstRows.includes('LOSES') || firstRows.includes('LOSS')) {
         console.log('→ WASTE file detected');
         return 'waste';
       }
+
+      // Rozpoznawanie plików godzinowych (hourly sales)
       if (firstRows.includes('PRODAJA PO URAH') || (firstRows.includes('URA') && firstRows.includes('2025'))) {
         console.log('→ 2025 HOURLY file detected');
         return 'hourly';
       }
-      if (firstRows.includes('PRODAJA PO DNEVIH') || (firstRows.includes('DATUM') && firstRows.includes('2024'))) {
-        console.log('→ 2024 DAILY file detected');
+
+      // Rozpoznawanie plików dziennych (daily sales)
+      // Obsługa różnych formatów: "PRODAJA PO DNEVIH", "PRODAJA PO ARTIKLIH"
+      if (firstRows.includes('PRODAJA PO DNEVIH') ||
+          firstRows.includes('PRODAJA PO ARTIKLIH') ||
+          (firstRows.includes('DATUM') && firstRows.includes('2024'))) {
+        console.log('→ DAILY sales file detected');
         return 'daily';
       }
-      
+
+      // Rozpoznawanie po nazwie pliku
       const fileNameLower = fileName.toLowerCase();
       if (fileNameLower.includes('hour') || fileNameLower.includes('2025')) return 'hourly';
-      if (fileNameLower.includes('day') || fileNameLower.includes('2024')) return 'daily';
-      if (fileNameLower.includes('waste') || fileNameLower.includes('loss') || fileNameLower.includes('loses')) return 'waste';
-      
+      if (fileNameLower.includes('day') || fileNameLower.includes('2024') || fileNameLower.includes('prodaja')) return 'daily';
+      if (fileNameLower.includes('waste') || fileNameLower.includes('loss') || fileNameLower.includes('loses') || fileNameLower.includes('odpisi')) return 'waste';
+
       return 'unknown';
     } catch (err) {
       return 'unknown';
@@ -248,22 +257,67 @@ const BakeryPlanningSystem = () => {
   const parseEuropeanNumber = (value) => {
     if (typeof value === 'number') return value;
     if (!value) return 0;
-    
+
     // Konwertuj string na number obsługując format europejski (przecinek jako separator dziesiętny)
     const str = String(value).trim();
-    
+
     // Jeśli zawiera przecinek i kropkę, usuń kropki (separator tysięcy) i zamień przecinek na kropkę
     if (str.includes(',') && str.includes('.')) {
       return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
     }
-    
+
     // Jeśli zawiera tylko przecinek, zamień na kropkę (separator dziesiętny)
     if (str.includes(',')) {
       return parseFloat(str.replace(',', '.')) || 0;
     }
-    
+
     // Standardowe parsowanie
     return parseFloat(str) || 0;
+  };
+
+  // 🔍 Funkcja pomocnicza: Znajdź indeksy kolumn po nazwach
+  const findColumnIndices = (rawData, columnNames) => {
+    // Szukaj wiersza z nagłówkami (sprawdź pierwsze 5 wierszy)
+    let headerRow = null;
+    let headerRowIndex = -1;
+
+    for (let i = 0; i < Math.min(5, rawData.length); i++) {
+      const row = rawData[i];
+      const rowText = row.map(cell => String(cell || '').toUpperCase()).join(' ');
+
+      // Sprawdź czy ten wiersz zawiera wymagane nagłówki
+      const hasRequiredHeaders = columnNames.some(name =>
+        rowText.includes(name.toUpperCase())
+      );
+
+      if (hasRequiredHeaders) {
+        headerRow = row;
+        headerRowIndex = i;
+        break;
+      }
+    }
+
+    if (!headerRow) {
+      console.warn('⚠️ Nie znaleziono wiersza z nagłówkami');
+      return { indices: {}, headerRowIndex: -1 };
+    }
+
+    console.log(`📋 Znaleziono nagłówki w wierszu ${headerRowIndex + 1}:`, headerRow);
+
+    // Znajdź indeksy dla każdej nazwy kolumny
+    const indices = {};
+    columnNames.forEach(name => {
+      const index = headerRow.findIndex(cell => {
+        const cellText = String(cell || '').toUpperCase();
+        return cellText.includes(name.toUpperCase());
+      });
+      if (index !== -1) {
+        indices[name] = index;
+      }
+    });
+
+    console.log('📊 Mapowanie kolumn:', indices);
+    return { indices, headerRowIndex };
   };
 
   const parseAllData = async (hourlyFile, dailyFile, wasteFile) => {
@@ -277,17 +331,56 @@ const BakeryPlanningSystem = () => {
       const workbook = XLSX.read(hourlyFile.data, { cellDates: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      
-      sales2025Local = rawData.slice(3).filter(row => row.length > 6 && row[4]).map(row => ({
-        date: new Date(row[1]),
-        dateStr: new Date(row[1]).toISOString().split('T')[0],
-        dayOfWeek: new Date(row[1]).getDay(),
-        hour: row[2],
-        eanCode: row[4],
-        productName: (row[5] || '').trim(),
-        quantity: parseEuropeanNumber(row[6])
-      }));
-      
+
+      // 🔍 Znajdź kolumny po nazwach (dla hourly: DATUM, URA, EANCODA, NAZIV, KOLIČINA)
+      const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'URA', 'EANCODA', 'NAZIV', 'KOLIČINA']);
+
+      if (headerRowIndex === -1 || !indices.DATUM || !indices.EANCODA || !indices.NAZIV || !indices.KOLIČINA) {
+        const missingCols = [
+          !indices.DATUM && 'DATUM',
+          !indices.EANCODA && 'EANCODA',
+          !indices.NAZIV && 'NAZIV',
+          !indices.KOLIČINA && 'KOLIČINA'
+        ].filter(Boolean).join(', ');
+
+        console.error('❌', t.fileErrorMissingColumns);
+        console.error(t.fileFoundColumns + ':', Object.keys(indices));
+        console.error(t.fileMissingColumns + ':', missingCols);
+
+        throw new Error(`${t.fileErrorMissingColumns} (${t.hourlySales}). ${t.fileMissingColumns}: ${missingCols}`);
+      }
+
+      // Parsuj dane zaczynając od wiersza po nagłówkach
+      sales2025Local = rawData
+        .slice(headerRowIndex + 1)
+        .filter(row => row.length > 3 && row[indices.EANCODA])
+        .map(row => {
+          const dateValue = row[indices.DATUM];
+          let date;
+
+          // Obsługa różnych formatów daty
+          if (typeof dateValue === 'number') {
+            // Excel serial date number
+            date = new Date((dateValue - 25569) * 86400 * 1000);
+          } else if (dateValue instanceof Date) {
+            date = dateValue;
+          } else {
+            date = new Date(dateValue);
+          }
+
+          return {
+            date: date,
+            dateStr: date.toISOString().split('T')[0],
+            dayOfWeek: date.getDay(),
+            hour: indices.URA !== undefined ? row[indices.URA] : null,
+            eanCode: String(row[indices.EANCODA] || '').trim(),
+            productName: String(row[indices.NAZIV] || '').trim(),
+            quantity: parseEuropeanNumber(row[indices.KOLIČINA])
+          };
+        })
+        .filter(item => !isNaN(item.date.getTime())); // Odfiltruj nieprawidłowe daty
+
+      console.log(`✅ Parsed ${sales2025Local.length} hourly sales records`);
       status.hourly = true;
     }
     
@@ -296,16 +389,55 @@ const BakeryPlanningSystem = () => {
       const workbook = XLSX.read(dailyFile.data, { cellDates: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      
-      sales2024Local = rawData.slice(3).filter(row => row.length > 6 && row[3]).map(row => ({
-        date: new Date(row[0]),
-        dateStr: new Date(row[0]).toISOString().split('T')[0],
-        dayOfWeek: new Date(row[0]).getDay(),
-        eanCode: row[3],
-        productName: (row[4] || '').trim(),
-        quantity: parseEuropeanNumber(row[18])
-      }));
-      
+
+      // 🔍 Znajdź kolumny po nazwach
+      const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'EANCODA', 'NAZIV', 'KOLIČINA']);
+
+      if (headerRowIndex === -1 || !indices.DATUM || !indices.EANCODA || !indices.NAZIV || !indices.KOLIČINA) {
+        const missingCols = [
+          !indices.DATUM && 'DATUM',
+          !indices.EANCODA && 'EANCODA',
+          !indices.NAZIV && 'NAZIV',
+          !indices.KOLIČINA && 'KOLIČINA'
+        ].filter(Boolean).join(', ');
+
+        console.error('❌', t.fileErrorMissingColumns);
+        console.error(t.fileFoundColumns + ':', Object.keys(indices));
+        console.error(t.fileMissingColumns + ':', missingCols);
+
+        throw new Error(`${t.fileErrorMissingColumns} (${t.dailySales}). ${t.fileMissingColumns}: ${missingCols}`);
+      }
+
+      // Parsuj dane zaczynając od wiersza po nagłówkach
+      sales2024Local = rawData
+        .slice(headerRowIndex + 1)
+        .filter(row => row.length > 3 && row[indices.EANCODA])
+        .map(row => {
+          const dateValue = row[indices.DATUM];
+          let date;
+
+          // Obsługa różnych formatów daty
+          if (typeof dateValue === 'number') {
+            // Excel serial date number
+            date = new Date((dateValue - 25569) * 86400 * 1000);
+          } else if (dateValue instanceof Date) {
+            date = dateValue;
+          } else {
+            date = new Date(dateValue);
+          }
+
+          return {
+            date: date,
+            dateStr: date.toISOString().split('T')[0],
+            dayOfWeek: date.getDay(),
+            eanCode: String(row[indices.EANCODA] || '').trim(),
+            productName: String(row[indices.NAZIV] || '').trim(),
+            quantity: parseEuropeanNumber(row[indices.KOLIČINA])
+          };
+        })
+        .filter(item => !isNaN(item.date.getTime())); // Odfiltruj nieprawidłowe daty
+
+      console.log(`✅ Parsed ${sales2024Local.length} daily sales records`);
       status.daily = true;
     }
     
@@ -314,15 +446,54 @@ const BakeryPlanningSystem = () => {
       const workbook = XLSX.read(wasteFile.data, { cellDates: true });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      
-      wasteLocal = rawData.slice(3).filter(row => row.length > 3).map(row => ({
-        date: new Date(row[0]),
-        dateStr: new Date(row[0]).toISOString().split('T')[0],
-        eanCode: row[3] || row[4],
-        productName: (row[4] || row[5] || '').trim(),
-        wasteQuantity: parseEuropeanNumber(row[18] || row[6])
-      }));
-      
+
+      // 🔍 Znajdź kolumny po nazwach
+      const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'EANCODA', 'NAZIV', 'KOLIČINA']);
+
+      if (headerRowIndex === -1 || !indices.DATUM || !indices.EANCODA || !indices.NAZIV || !indices.KOLIČINA) {
+        const missingCols = [
+          !indices.DATUM && 'DATUM',
+          !indices.EANCODA && 'EANCODA',
+          !indices.NAZIV && 'NAZIV',
+          !indices.KOLIČINA && 'KOLIČINA'
+        ].filter(Boolean).join(', ');
+
+        console.error('❌', t.fileErrorMissingColumns);
+        console.error(t.fileFoundColumns + ':', Object.keys(indices));
+        console.error(t.fileMissingColumns + ':', missingCols);
+
+        throw new Error(`${t.fileErrorMissingColumns} (${t.wasteOptional}). ${t.fileMissingColumns}: ${missingCols}`);
+      }
+
+      // Parsuj dane zaczynając od wiersza po nagłówkach
+      wasteLocal = rawData
+        .slice(headerRowIndex + 1)
+        .filter(row => row.length > 3 && row[indices.EANCODA])
+        .map(row => {
+          const dateValue = row[indices.DATUM];
+          let date;
+
+          // Obsługa różnych formatów daty
+          if (typeof dateValue === 'number') {
+            // Excel serial date number
+            date = new Date((dateValue - 25569) * 86400 * 1000);
+          } else if (dateValue instanceof Date) {
+            date = dateValue;
+          } else {
+            date = new Date(dateValue);
+          }
+
+          return {
+            date: date,
+            dateStr: date.toISOString().split('T')[0],
+            eanCode: String(row[indices.EANCODA] || '').trim(),
+            productName: String(row[indices.NAZIV] || '').trim(),
+            wasteQuantity: parseEuropeanNumber(row[indices.KOLIČINA])
+          };
+        })
+        .filter(item => !isNaN(item.date.getTime())); // Odfiltruj nieprawidłowe daty
+
+      console.log(`✅ Parsed ${wasteLocal.length} waste records`);
       status.waste = true;
     }
     

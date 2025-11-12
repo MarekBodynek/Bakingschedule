@@ -72,49 +72,72 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
     // 2. Sortuj według priorytetu (najpopularniejsze najpierw)
     productsWithData.sort((a, b) => b.priority - a.priority);
 
-    // 3. Utwórz tace z produktami - ROUND ROBIN dla pełnego asortymentu od początku
+    // 3. Pogrupuj produkty według programu pieczenia
+    const productsByProgram = {};
+    productsWithData.forEach(product => {
+      if (!productsByProgram[product.bakingProgram]) {
+        productsByProgram[product.bakingProgram] = [];
+      }
+      productsByProgram[product.bakingProgram].push(product);
+    });
+
+    // 4. Dla każdego programu: pakuj produkty na tace (bin-packing)
     const allTrays = [];
     let trayId = 1;
+    const traysByProgram = {};
 
-    // Przygotuj strukturę z pozostałymi ilościami dla każdego produktu
-    const productQueue = productsWithData.map(product => ({
-      product: product,
-      remainingQty: product.quantity,
-      traysNeeded: Math.ceil(product.quantity / product.unitsPerTray)
-    }));
+    Object.entries(productsByProgram).forEach(([program, products]) => {
+      traysByProgram[program] = [];
 
-    // Round-robin: dodawaj po jednej tacy każdego produktu w kolejnych rundach
-    let hasRemainingProducts = true;
-    while (hasRemainingProducts) {
-      hasRemainingProducts = false;
+      // Przygotuj kolejkę produktów z pozostałymi ilościami
+      const productQueue = products.map(p => ({
+        product: p,
+        remainingQty: p.quantity
+      }));
+
+      // Pakuj produkty na tace sekwencyjnie
+      let currentTray = null;
+      let currentTrayCapacity = 0;
 
       productQueue.forEach(item => {
-        if (item.remainingQty > 0) {
-          hasRemainingProducts = true;
-          const qtyOnThisTray = Math.min(item.remainingQty, item.product.unitsPerTray);
+        while (item.remainingQty > 0) {
+          // Jeśli nie ma aktualnej tacy lub jest pełna, utwórz nową
+          if (!currentTray || currentTrayCapacity >= item.product.unitsPerTray) {
+            if (currentTray) {
+              allTrays.push(currentTray);
+              traysByProgram[program].push(currentTray);
+            }
 
-          allTrays.push({
-            id: trayId++,
+            currentTray = {
+              id: trayId++,
+              products: [], // Tablica produktów na tej tacy
+              program: parseInt(program),
+              programName: item.product.programName,
+              bakingTime: item.product.bakingTime,
+              priority: item.product.priority
+            };
+            currentTrayCapacity = 0;
+          }
+
+          // Dodaj tyle produktu ile się zmieści na tacy
+          const spaceLeft = item.product.unitsPerTray - currentTrayCapacity;
+          const qtyToAdd = Math.min(item.remainingQty, spaceLeft);
+
+          currentTray.products.push({
             product: item.product,
-            quantity: qtyOnThisTray,
-            program: item.product.bakingProgram,
-            programName: item.product.programName,
-            bakingTime: item.product.bakingTime,
-            priority: item.product.priority
+            quantity: qtyToAdd
           });
 
-          item.remainingQty -= qtyOnThisTray;
+          currentTrayCapacity += qtyToAdd;
+          item.remainingQty -= qtyToAdd;
         }
       });
-    }
 
-    // 4. Pogrupuj tace według programu
-    const traysByProgram = {};
-    allTrays.forEach(tray => {
-      if (!traysByProgram[tray.program]) {
-        traysByProgram[tray.program] = [];
+      // Dodaj ostatnią tacę jeśli istnieje
+      if (currentTray && currentTray.products.length > 0) {
+        allTrays.push(currentTray);
+        traysByProgram[program].push(currentTray);
       }
-      traysByProgram[tray.program].push(tray);
     });
 
     // 5. Zaplanuj batche pieczenia
@@ -134,7 +157,9 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
             bakingTime: batchTrays[0].bakingTime,
             trays: batchTrays,
             trayCount: batchTrays.length,
-            totalPieces: batchTrays.reduce((sum, t) => sum + t.quantity, 0)
+            totalPieces: batchTrays.reduce((sum, t) =>
+              sum + t.products.reduce((pSum, p) => pSum + p.quantity, 0), 0
+            )
           });
         }
       });
@@ -187,19 +212,31 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
   const { batches, totalTrays, totalTime } = trayAllocation;
   const totalPieces = batches.reduce((sum, batch) => sum + batch.totalPieces, 0);
 
-  // Zbierz wszystkie tace z informacją o batchu
+  // Zbierz wszystkie tace z informacją o batchu - rozwiń produkty na tacy
   const allTraysWithBatch = [];
   batches.forEach(batch => {
     batch.trays.forEach(tray => {
-      allTraysWithBatch.push({
-        ...tray,
-        batchNumber: batch.batchNumber
+      // Każda taca może mieć wiele produktów, tworzymy osobny wiersz dla każdego produktu
+      tray.products.forEach((productItem, productIndex) => {
+        allTraysWithBatch.push({
+          id: tray.id,
+          trayId: tray.id,
+          product: productItem.product,
+          quantity: productItem.quantity,
+          program: tray.program,
+          programName: tray.programName,
+          bakingTime: tray.bakingTime,
+          batchNumber: batch.batchNumber,
+          isFirstProductOnTray: productIndex === 0,
+          isLastProductOnTray: productIndex === tray.products.length - 1,
+          totalProductsOnTray: tray.products.length
+        });
       });
     });
   });
 
   // Flatten dla druku (bez informacji o batchu)
-  const allTrays = allTraysWithBatch.map(({ batchNumber, ...tray }) => tray);
+  const allTrays = allTraysWithBatch.map(({ batchNumber, isFirstProductOnTray, isLastProductOnTray, totalProductsOnTray, ...tray }) => tray);
 
   return (
     <div className="space-y-4" data-wave={waveNumber}>
@@ -260,13 +297,13 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
             </tr>
           </thead>
           <tbody>
-            {allTrays.map((tray) => (
-              <tr key={tray.id}>
-                <td className="border border-black px-3 py-2 font-bold">{tray.id}</td>
-                <td className="border border-black px-3 py-2">{tray.product.name}</td>
-                <td className="border border-black px-3 py-2 text-sm">{tray.product.sku}</td>
-                <td className="border border-black px-3 py-2 text-sm">{tray.programName}</td>
-                <td className="border border-black px-3 py-2 text-right font-bold">{tray.quantity}</td>
+            {allTrays.map((row, idx) => (
+              <tr key={`print-${row.trayId}-${idx}`}>
+                <td className="border border-black px-3 py-2 font-bold">{row.trayId}</td>
+                <td className="border border-black px-3 py-2">{row.product.name}</td>
+                <td className="border border-black px-3 py-2 text-sm">{row.product.sku}</td>
+                <td className="border border-black px-3 py-2 text-sm">{row.programName}</td>
+                <td className="border border-black px-3 py-2 text-right font-bold">{row.quantity}</td>
               </tr>
             ))}
           </tbody>
@@ -293,48 +330,57 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
               </tr>
             </thead>
             <tbody>
-              {allTraysWithBatch.map((tray, index) => {
-                const nextTray = allTraysWithBatch[index + 1];
+              {allTraysWithBatch.map((row, index) => {
+                const nextRow = allTraysWithBatch[index + 1];
 
-                // Sprawdź czy to ostatnia taca w batchu
-                const isLastInBatch = !nextTray || nextTray.batchNumber !== tray.batchNumber;
+                // Sprawdź czy to ostatni produkt w batchu
+                const isLastInBatch = !nextRow || nextRow.batchNumber !== row.batchNumber;
 
-                // Sprawdź czy następna taca to inny produkt (ale ten sam batch)
-                const isLastOfProduct = nextTray &&
-                                       nextTray.batchNumber === tray.batchNumber &&
-                                       nextTray.product.sku !== tray.product.sku;
+                // Sprawdź czy następny wiersz to inna taca (ale ten sam batch)
+                const isLastProductOnTray = row.isLastProductOnTray && nextRow && nextRow.batchNumber === row.batchNumber;
 
                 return (
-                  <React.Fragment key={tray.id}>
+                  <React.Fragment key={`${row.trayId}-${index}`}>
                     <tr
                       className={`hover:bg-blue-50 transition-colors ${
-                        tray.product.isKey ? 'bg-yellow-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
+                        row.product.isKey ? 'bg-yellow-50' : index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                       }`}
                     >
                       <td className="px-4 py-6">
-                        <div className="w-10 h-10 rounded bg-blue-600 text-white flex items-center justify-center font-bold">
-                          {tray.id}
-                        </div>
+                        {row.isFirstProductOnTray ? (
+                          <div className="w-10 h-10 rounded bg-blue-600 text-white flex items-center justify-center font-bold">
+                            {row.trayId}
+                          </div>
+                        ) : (
+                          <div className="w-10 h-10 rounded border-2 border-blue-300 text-blue-400 flex items-center justify-center font-bold text-xs">
+                            ↓
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-6">
                         <div className="font-semibold text-gray-800">
-                          {tray.product.name}
-                          {tray.product.isKey && (
+                          {row.product.name}
+                          {row.product.isKey && (
                             <span className="ml-2 px-2 py-0.5 bg-yellow-200 text-yellow-800 rounded text-xs font-bold">
                               ★ {t.keyProduct || 'KEY'}
                             </span>
                           )}
+                          {row.totalProductsOnTray > 1 && (
+                            <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-700 rounded text-xs font-semibold">
+                              {t.mixed || 'MIXED'}
+                            </span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-4 py-6 text-sm text-gray-600">{tray.product.sku}</td>
-                      <td className="px-4 py-6 text-sm text-gray-600">{tray.programName}</td>
+                      <td className="px-4 py-6 text-sm text-gray-600">{row.product.sku}</td>
+                      <td className="px-4 py-6 text-sm text-gray-600">{row.programName}</td>
                       <td className="px-4 py-6 text-right">
-                        <span className="text-2xl font-bold text-blue-600">{tray.quantity}</span>
+                        <span className="text-2xl font-bold text-blue-600">{row.quantity}</span>
                         <span className="text-sm text-gray-600 ml-1">{t.pcs || 'pcs'}</span>
                       </td>
                     </tr>
-                    {/* Separator między produktami w tym samym batchu - cieńszy, szary */}
-                    {isLastOfProduct && (
+                    {/* Separator między tacami w tym samym batchu - szary */}
+                    {isLastProductOnTray && (
                       <tr className="h-1 bg-gray-300">
                         <td colSpan="5" className="p-0"></td>
                       </tr>
