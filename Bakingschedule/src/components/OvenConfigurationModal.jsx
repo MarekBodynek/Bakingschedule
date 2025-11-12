@@ -100,45 +100,48 @@ const OvenConfigurationModal = ({
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
-      // Parse data - skip first 2 rows (headers)
+      // Parse data - skip first 4 rows (store name, empty, section headers, column headers)
       const products = [];
       const programs = new Set();
-      let detectedOvenConfig = null;
+      const ovenCapacities = [];
       const detectedProgramDurations = {};
 
       for (let i = 0; i < jsonData.length; i++) {
         const row = jsonData[i];
 
-        // Check for oven configuration (Row 28 or similar)
-        const cellText = String(row[0] || '').toLowerCase();
-        if (cellText.includes('oven') && cellText.includes('tray')) {
-          // Parse: "In the store there are 3 ovens: 3 tray oven, 3 tray oven and 6 trays oven"
-          const ovenMatches = cellText.match(/(\d+)\s*tray/g);
-          if (ovenMatches) {
-            const ovenCapacities = ovenMatches.map(m => parseInt(m.match(/(\d+)/)[1]));
-            const totalCapacity = ovenCapacities.reduce((sum, cap) => sum + cap, 0);
-            detectedOvenConfig = {
-              ovenCount: ovenCapacities.length,
-              ovenCapacity: totalCapacity,
-              individualCapacities: ovenCapacities
-            };
-            console.log('🔧 Detected oven config:', detectedOvenConfig);
+        // Parse oven configuration from columns 6-7 (NAZIV oven number, Number of Trays)
+        // Row 5: [..., 1, 3, ...] means Oven 1 has 3 trays
+        if (i >= 4) {
+          const ovenNumber = parseInt(row[6]);
+          const ovenTrays = parseInt(row[7]);
+          if (ovenNumber && ovenTrays && !isNaN(ovenNumber) && !isNaN(ovenTrays)) {
+            // Zapisz tylko jeśli jeszcze nie mamy tego pieca
+            if (!ovenCapacities[ovenNumber - 1]) {
+              ovenCapacities[ovenNumber - 1] = ovenTrays;
+              console.log(`🔧 Detected Oven ${ovenNumber}: ${ovenTrays} trays`);
+            }
           }
         }
 
-        // Check for program durations (e.g., "Program 1 – 25 minut")
-        if (cellText.includes('program') && cellText.includes('minut')) {
-          const programMatch = cellText.match(/program\s*(\d+)\s*[–-]\s*(\d+)\s*minut/i);
-          if (programMatch) {
-            const programNum = parseInt(programMatch[1]);
-            const duration = parseInt(programMatch[2]);
-            detectedProgramDurations[programNum] = duration;
-            console.log(`⏱️ Detected Program ${programNum}: ${duration} minutes`);
+        // Parse program durations from columns 9-10 (program name, duration)
+        // Row 5: [..., "Program 1", 25, ...] means Program 1 takes 25 minutes
+        if (i >= 4) {
+          const programName = String(row[9] || '').trim();
+          const duration = parseInt(row[10]);
+          if (programName && duration && !isNaN(duration)) {
+            const programMatch = programName.match(/program\s*(\d+)/i);
+            if (programMatch) {
+              const programNum = parseInt(programMatch[1]);
+              if (!detectedProgramDurations[programNum]) {
+                detectedProgramDurations[programNum] = duration;
+                console.log(`⏱️ Detected Program ${programNum}: ${duration} minutes`);
+              }
+            }
           }
         }
 
-        // Parse product data (skip first 2 rows, stop at empty or info rows)
-        if (i >= 3) {
+        // Parse product data (skip first 4 rows: store name, empty, section headers, column headers)
+        if (i >= 4) {
           const eanCode = String(row[0] || '').trim();
           const name = String(row[1] || '').trim();
           const program = parseInt(row[2]);
@@ -190,21 +193,22 @@ const OvenConfigurationModal = ({
       setProgramConfig(newProgramConfig);
 
       // Ustaw wykrytą konfigurację pieców
-      if (detectedOvenConfig) {
+      if (ovenCapacities.length > 0) {
+        const totalCapacity = ovenCapacities.reduce((sum, cap) => sum + cap, 0);
         setOvenSettings({
-          ovenCount: detectedOvenConfig.ovenCount,
-          ovenCapacity: detectedOvenConfig.ovenCapacity,
-          individualCapacities: detectedOvenConfig.individualCapacities
+          ovenCount: ovenCapacities.length,
+          ovenCapacity: totalCapacity,
+          individualCapacities: ovenCapacities
         });
       }
 
       let statusMsg = `✅ Naloženo ${products.length} izdelkov s ${programs.size} programi`;
-      if (detectedOvenConfig) {
-        statusMsg += `\n🔧 Zaznano ${detectedOvenConfig.ovenCount} pečic:`;
-        detectedOvenConfig.individualCapacities.forEach((capacity, idx) => {
+      if (ovenCapacities.length > 0) {
+        statusMsg += `\n🔧 Zaznano ${ovenCapacities.length} pečic:`;
+        ovenCapacities.forEach((capacity, idx) => {
           statusMsg += `\n  • ${idx + 1}. pečica: ${capacity} ${capacity === 1 ? 'pladenj' : capacity <= 4 ? 'pladnji' : 'pladnjev'}`;
         });
-        statusMsg += `\n  Skupaj: ${detectedOvenConfig.ovenCapacity} pladnjev`;
+        statusMsg += `\n  Skupaj: ${ovenCapacities.reduce((sum, cap) => sum + cap, 0)} pladnjev`;
       }
       if (Object.keys(detectedProgramDurations).length > 0) {
         statusMsg += `\n⏱️ Zaznani časi za ${Object.keys(detectedProgramDurations).length} programov`;
