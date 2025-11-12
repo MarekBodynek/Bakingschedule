@@ -538,6 +538,12 @@ const BakeryPlanningSystem = () => {
       configProductMap[cp.sku] = cp;
     });
     console.log(`📋 Loaded ${configProducts.length} products from config file`);
+    if (configProducts.length > 0) {
+      console.log(`📋 First 3 config SKUs:`, configProducts.slice(0, 3).map(p => p.sku));
+    }
+    if (allSales.length > 0) {
+      console.log(`📋 First 3 sales SKUs:`, [...new Set(allSales.map(s => s.eanCode))].slice(0, 3));
+    }
 
     allSales.forEach(s => {
       if (!seen.has(s.eanCode)) {
