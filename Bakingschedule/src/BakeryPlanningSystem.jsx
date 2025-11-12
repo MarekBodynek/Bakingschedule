@@ -319,19 +319,11 @@ const BakeryPlanningSystem = () => {
         return cellText === name.toUpperCase();
       });
 
-      // Jeśli nie znaleziono exact match, szukaj jako substring (ale unikaj PE_NAZIV gdy szukamy NAZIV)
-      if (index === -1) {
+      // Jeśli nie znaleziono exact match, szukaj jako substring - ALE NIE DLA NAZIV (tylko exact match)
+      if (index === -1 && name !== 'NAZIV') {
         index = headerRow.findIndex(cell => {
           const cellText = String(cell || '').toUpperCase().trim();
-          // Dla nagłówków używaj zawierania, ale sprawdź czy to nie jest PE_NAZIV zamiast NAZIV
-          if (cellText.length < 20 && cellText.includes(name.toUpperCase())) {
-            // Jeśli szukamy NAZIV, nie dopasowuj PE_NAZIV, NAZIV_PE, itp.
-            if (name === 'NAZIV' && (cellText.includes('PE_') || cellText.includes('_PE'))) {
-              return false;
-            }
-            return true;
-          }
-          return false;
+          return cellText.length < 20 && cellText.includes(name.toUpperCase());
         });
       }
 
