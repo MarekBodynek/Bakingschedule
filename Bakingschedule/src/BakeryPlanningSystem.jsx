@@ -282,16 +282,23 @@ const BakeryPlanningSystem = () => {
 
     for (let i = 0; i < Math.min(5, rawData.length); i++) {
       const row = rawData[i];
-      const rowText = row.map(cell => String(cell || '').toUpperCase()).join(' ');
 
-      // Sprawdź czy ten wiersz zawiera wymagane nagłówki
-      const hasRequiredHeaders = columnNames.some(name =>
-        rowText.includes(name.toUpperCase())
-      );
+      // Sprawdź ile wymaganych kolumn znajduje się jako osobne komórki w tym wierszu
+      const foundColumns = columnNames.filter(name => {
+        return row.some(cell => {
+          const cellText = String(cell || '').toUpperCase().trim();
+          // Nagłówki powinny być krótkie i dokładnie pasować
+          // Ignoruj długie teksty (jak "Filter Datum od: ...")
+          return cellText.length < 20 && cellText.includes(name.toUpperCase());
+        });
+      });
 
-      if (hasRequiredHeaders) {
+      // Wymagaj co najmniej 3 z 4 kolumn (lub wszystkich dla mniejszej listy)
+      const requiredCount = Math.max(3, columnNames.length - 1);
+      if (foundColumns.length >= requiredCount) {
         headerRow = row;
         headerRowIndex = i;
+        console.log(`📋 Znaleziono ${foundColumns.length}/${columnNames.length} kolumn w wierszu ${i + 1}`);
         break;
       }
     }
@@ -301,14 +308,15 @@ const BakeryPlanningSystem = () => {
       return { indices: {}, headerRowIndex: -1 };
     }
 
-    console.log(`📋 Znaleziono nagłówki w wierszu ${headerRowIndex + 1}:`, headerRow);
+    console.log(`📋 Znaleziono nagłówki w wierszu ${headerRowIndex + 1}:`, headerRow.slice(0, 20));
 
     // Znajdź indeksy dla każdej nazwy kolumny
     const indices = {};
     columnNames.forEach(name => {
       const index = headerRow.findIndex(cell => {
-        const cellText = String(cell || '').toUpperCase();
-        return cellText.includes(name.toUpperCase());
+        const cellText = String(cell || '').toUpperCase().trim();
+        // Dla nagłówków używaj dokładnego dopasowania lub zawierania w krótkim tekście
+        return cellText.length < 20 && cellText.includes(name.toUpperCase());
       });
       if (index !== -1) {
         indices[name] = index;
@@ -331,15 +339,21 @@ const BakeryPlanningSystem = () => {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-      // 🔍 Znajdź kolumny po nazwach (dla hourly: DATUM, URA, EANCODA, NAZIV, KOLIČINA)
-      const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'URA', 'EANCODA', 'NAZIV', 'KOLIČINA']);
+      // 🔍 Znajdź kolumny po nazwach (dla hourly: DATUM, URA, EANCODA, NAZIV, KOLIČINA lub KOL)
+      const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'URA', 'EANCODA', 'NAZIV', 'KOLIČINA', 'KOL']);
+
+      // Normalizuj nazwę kolumny ilości - może być KOLIČINA lub KOL
+      if (indices.KOL !== undefined && indices.KOLIČINA === undefined) {
+        indices.KOLIČINA = indices.KOL;
+        console.log('📊 Używam kolumny KOL jako KOLIČINA');
+      }
 
       if (headerRowIndex === -1 || indices.DATUM === undefined || indices.EANCODA === undefined || indices.NAZIV === undefined || indices.KOLIČINA === undefined) {
         const missingCols = [
           indices.DATUM === undefined && 'DATUM',
           indices.EANCODA === undefined && 'EANCODA',
           indices.NAZIV === undefined && 'NAZIV',
-          indices.KOLIČINA === undefined && 'KOLIČINA'
+          (indices.KOLIČINA === undefined && indices.KOL === undefined) && 'KOLIČINA/KOL'
         ].filter(Boolean).join(', ');
 
         console.error('❌ Hourly sales file - missing required columns');
@@ -389,15 +403,21 @@ const BakeryPlanningSystem = () => {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-      // 🔍 Znajdź kolumny po nazwach
-      const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'EANCODA', 'NAZIV', 'KOLIČINA']);
+      // 🔍 Znajdź kolumny po nazwach (daily: DATUM, EANCODA, NAZIV, KOLIČINA lub KOL)
+      const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'EANCODA', 'NAZIV', 'KOLIČINA', 'KOL']);
+
+      // Normalizuj nazwę kolumny ilości - może być KOLIČINA lub KOL
+      if (indices.KOL !== undefined && indices.KOLIČINA === undefined) {
+        indices.KOLIČINA = indices.KOL;
+        console.log('📊 Używam kolumny KOL jako KOLIČINA');
+      }
 
       if (headerRowIndex === -1 || indices.DATUM === undefined || indices.EANCODA === undefined || indices.NAZIV === undefined || indices.KOLIČINA === undefined) {
         const missingCols = [
           indices.DATUM === undefined && 'DATUM',
           indices.EANCODA === undefined && 'EANCODA',
           indices.NAZIV === undefined && 'NAZIV',
-          indices.KOLIČINA === undefined && 'KOLIČINA'
+          (indices.KOLIČINA === undefined && indices.KOL === undefined) && 'KOLIČINA/KOL'
         ].filter(Boolean).join(', ');
 
         console.error('❌ Daily sales file - missing required columns');
@@ -446,15 +466,21 @@ const BakeryPlanningSystem = () => {
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
-      // 🔍 Znajdź kolumny po nazwach
-      const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'EANCODA', 'NAZIV', 'KOLIČINA']);
+      // 🔍 Znajdź kolumny po nazwach (waste: DATUM, EANCODA, NAZIV, KOLIČINA lub KOL)
+      const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'EANCODA', 'NAZIV', 'KOLIČINA', 'KOL']);
+
+      // Normalizuj nazwę kolumny ilości - może być KOLIČINA lub KOL
+      if (indices.KOL !== undefined && indices.KOLIČINA === undefined) {
+        indices.KOLIČINA = indices.KOL;
+        console.log('📊 Używam kolumny KOL jako KOLIČINA');
+      }
 
       if (headerRowIndex === -1 || indices.DATUM === undefined || indices.EANCODA === undefined || indices.NAZIV === undefined || indices.KOLIČINA === undefined) {
         const missingCols = [
           indices.DATUM === undefined && 'DATUM',
           indices.EANCODA === undefined && 'EANCODA',
           indices.NAZIV === undefined && 'NAZIV',
-          indices.KOLIČINA === undefined && 'KOLIČINA'
+          (indices.KOLIČINA === undefined && indices.KOL === undefined) && 'KOLIČINA/KOL'
         ].filter(Boolean).join(', ');
 
         console.error('❌ Waste file - missing required columns');
