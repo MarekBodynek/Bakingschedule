@@ -1,5 +1,5 @@
 // Service Worker for PWA
-const CACHE_NAME = 'bakery-planning-v2';
+const CACHE_NAME = 'bakery-planning-v3';
 const urlsToCache = [
   '/',
   '/index.html'
