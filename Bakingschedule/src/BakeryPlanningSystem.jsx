@@ -234,9 +234,8 @@ const BakeryPlanningSystem = () => {
       }
 
       // Rozpoznawanie plików dziennych (daily sales)
-      // Obsługa różnych formatów: "PRODAJA PO DNEVIH", "PRODAJA PO ARTIKLIH"
+      // TYLKO "PRODAJA PO DNEVIH" (sprzedaż po dniach), NIE "po artiklih"!
       if (firstRows.includes('PRODAJA PO DNEVIH') ||
-          firstRows.includes('PRODAJA PO ARTIKLIH') ||
           (firstRows.includes('DATUM') && firstRows.includes('2024'))) {
         console.log('→ DAILY sales file detected');
         return 'daily';
@@ -244,8 +243,8 @@ const BakeryPlanningSystem = () => {
 
       // Rozpoznawanie po nazwie pliku
       const fileNameLower = fileName.toLowerCase();
-      if (fileNameLower.includes('hour') || fileNameLower.includes('2025')) return 'hourly';
-      if (fileNameLower.includes('day') || fileNameLower.includes('2024') || fileNameLower.includes('prodaja')) return 'daily';
+      if (fileNameLower.includes('hour') || fileNameLower.includes('po urah') || fileNameLower.includes('2025')) return 'hourly';
+      if (fileNameLower.includes('per day') || fileNameLower.includes('po dnevih')) return 'daily';
       if (fileNameLower.includes('waste') || fileNameLower.includes('loss') || fileNameLower.includes('loses') || fileNameLower.includes('odpisi')) return 'waste';
 
       return 'unknown';
