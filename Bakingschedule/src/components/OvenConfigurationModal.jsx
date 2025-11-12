@@ -287,7 +287,8 @@ const OvenConfigurationModal = ({
         </div>
 
         <div className="p-6 space-y-6">
-          {/* Language Selector Section */}
+          {/* Language Selector Section - HIDDEN (Only Slovenian now) */}
+          {false && (
           <div className="space-y-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h3 className="text-lg font-semibold text-gray-800">
               {translations?.languageSettings || '1. Ustawienia języka'}
@@ -314,6 +315,7 @@ const OvenConfigurationModal = ({
               </div>
             </div>
           </div>
+          )}
 
           {/* Upload Section */}
           <div className="space-y-4">
