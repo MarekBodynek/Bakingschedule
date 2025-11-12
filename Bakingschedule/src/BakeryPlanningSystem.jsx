@@ -313,11 +313,28 @@ const BakeryPlanningSystem = () => {
     // Znajdź indeksy dla każdej nazwy kolumny
     const indices = {};
     columnNames.forEach(name => {
-      const index = headerRow.findIndex(cell => {
+      // Najpierw szukaj EXACT match
+      let index = headerRow.findIndex(cell => {
         const cellText = String(cell || '').toUpperCase().trim();
-        // Dla nagłówków używaj dokładnego dopasowania lub zawierania w krótkim tekście
-        return cellText.length < 20 && cellText.includes(name.toUpperCase());
+        return cellText === name.toUpperCase();
       });
+
+      // Jeśli nie znaleziono exact match, szukaj jako substring (ale unikaj PE_NAZIV gdy szukamy NAZIV)
+      if (index === -1) {
+        index = headerRow.findIndex(cell => {
+          const cellText = String(cell || '').toUpperCase().trim();
+          // Dla nagłówków używaj zawierania, ale sprawdź czy to nie jest PE_NAZIV zamiast NAZIV
+          if (cellText.length < 20 && cellText.includes(name.toUpperCase())) {
+            // Jeśli szukamy NAZIV, nie dopasowuj PE_NAZIV, NAZIV_PE, itp.
+            if (name === 'NAZIV' && (cellText.includes('PE_') || cellText.includes('_PE'))) {
+              return false;
+            }
+            return true;
+          }
+          return false;
+        });
+      }
+
       if (index !== -1) {
         indices[name] = index;
       }
