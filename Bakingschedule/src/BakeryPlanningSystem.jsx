@@ -334,12 +334,12 @@ const BakeryPlanningSystem = () => {
       // 🔍 Znajdź kolumny po nazwach (dla hourly: DATUM, URA, EANCODA, NAZIV, KOLIČINA)
       const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'URA', 'EANCODA', 'NAZIV', 'KOLIČINA']);
 
-      if (headerRowIndex === -1 || !indices.DATUM || !indices.EANCODA || !indices.NAZIV || !indices.KOLIČINA) {
+      if (headerRowIndex === -1 || indices.DATUM === undefined || indices.EANCODA === undefined || indices.NAZIV === undefined || indices.KOLIČINA === undefined) {
         const missingCols = [
-          !indices.DATUM && 'DATUM',
-          !indices.EANCODA && 'EANCODA',
-          !indices.NAZIV && 'NAZIV',
-          !indices.KOLIČINA && 'KOLIČINA'
+          indices.DATUM === undefined && 'DATUM',
+          indices.EANCODA === undefined && 'EANCODA',
+          indices.NAZIV === undefined && 'NAZIV',
+          indices.KOLIČINA === undefined && 'KOLIČINA'
         ].filter(Boolean).join(', ');
 
         console.error('❌ Hourly sales file - missing required columns');
@@ -392,12 +392,12 @@ const BakeryPlanningSystem = () => {
       // 🔍 Znajdź kolumny po nazwach
       const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'EANCODA', 'NAZIV', 'KOLIČINA']);
 
-      if (headerRowIndex === -1 || !indices.DATUM || !indices.EANCODA || !indices.NAZIV || !indices.KOLIČINA) {
+      if (headerRowIndex === -1 || indices.DATUM === undefined || indices.EANCODA === undefined || indices.NAZIV === undefined || indices.KOLIČINA === undefined) {
         const missingCols = [
-          !indices.DATUM && 'DATUM',
-          !indices.EANCODA && 'EANCODA',
-          !indices.NAZIV && 'NAZIV',
-          !indices.KOLIČINA && 'KOLIČINA'
+          indices.DATUM === undefined && 'DATUM',
+          indices.EANCODA === undefined && 'EANCODA',
+          indices.NAZIV === undefined && 'NAZIV',
+          indices.KOLIČINA === undefined && 'KOLIČINA'
         ].filter(Boolean).join(', ');
 
         console.error('❌ Daily sales file - missing required columns');
@@ -449,12 +449,12 @@ const BakeryPlanningSystem = () => {
       // 🔍 Znajdź kolumny po nazwach
       const { indices, headerRowIndex } = findColumnIndices(rawData, ['DATUM', 'EANCODA', 'NAZIV', 'KOLIČINA']);
 
-      if (headerRowIndex === -1 || !indices.DATUM || !indices.EANCODA || !indices.NAZIV || !indices.KOLIČINA) {
+      if (headerRowIndex === -1 || indices.DATUM === undefined || indices.EANCODA === undefined || indices.NAZIV === undefined || indices.KOLIČINA === undefined) {
         const missingCols = [
-          !indices.DATUM && 'DATUM',
-          !indices.EANCODA && 'EANCODA',
-          !indices.NAZIV && 'NAZIV',
-          !indices.KOLIČINA && 'KOLIČINA'
+          indices.DATUM === undefined && 'DATUM',
+          indices.EANCODA === undefined && 'EANCODA',
+          indices.NAZIV === undefined && 'NAZIV',
+          indices.KOLIČINA === undefined && 'KOLIČINA'
         ].filter(Boolean).join(', ');
 
         console.error('❌ Waste file - missing required columns');
