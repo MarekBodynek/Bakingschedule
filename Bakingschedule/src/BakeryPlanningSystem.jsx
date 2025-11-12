@@ -343,11 +343,11 @@ const BakeryPlanningSystem = () => {
           !indices.KOLIČINA && 'KOLIČINA'
         ].filter(Boolean).join(', ');
 
-        console.error('❌', t.fileErrorMissingColumns);
-        console.error(t.fileFoundColumns + ':', Object.keys(indices));
-        console.error(t.fileMissingColumns + ':', missingCols);
+        console.error('❌ Hourly sales file - missing required columns');
+        console.error('Found columns:', Object.keys(indices));
+        console.error('Missing columns:', missingCols);
 
-        throw new Error(`${t.fileErrorMissingColumns} (${t.hourlySales}). ${t.fileMissingColumns}: ${missingCols}`);
+        throw new Error(`Hourly sales file is missing required columns: ${missingCols}`);
       }
 
       // Parsuj dane zaczynając od wiersza po nagłówkach
@@ -401,11 +401,11 @@ const BakeryPlanningSystem = () => {
           !indices.KOLIČINA && 'KOLIČINA'
         ].filter(Boolean).join(', ');
 
-        console.error('❌', t.fileErrorMissingColumns);
-        console.error(t.fileFoundColumns + ':', Object.keys(indices));
-        console.error(t.fileMissingColumns + ':', missingCols);
+        console.error('❌ Daily sales file - missing required columns');
+        console.error('Found columns:', Object.keys(indices));
+        console.error('Missing columns:', missingCols);
 
-        throw new Error(`${t.fileErrorMissingColumns} (${t.dailySales}). ${t.fileMissingColumns}: ${missingCols}`);
+        throw new Error(`Daily sales file is missing required columns: ${missingCols}`);
       }
 
       // Parsuj dane zaczynając od wiersza po nagłówkach
@@ -458,11 +458,11 @@ const BakeryPlanningSystem = () => {
           !indices.KOLIČINA && 'KOLIČINA'
         ].filter(Boolean).join(', ');
 
-        console.error('❌', t.fileErrorMissingColumns);
-        console.error(t.fileFoundColumns + ':', Object.keys(indices));
-        console.error(t.fileMissingColumns + ':', missingCols);
+        console.error('❌ Waste file - missing required columns');
+        console.error('Found columns:', Object.keys(indices));
+        console.error('Missing columns:', missingCols);
 
-        throw new Error(`${t.fileErrorMissingColumns} (${t.wasteOptional}). ${t.fileMissingColumns}: ${missingCols}`);
+        throw new Error(`Waste file is missing required columns: ${missingCols}`);
       }
 
       // Parsuj dane zaczynając od wiersza po nagłówkach
