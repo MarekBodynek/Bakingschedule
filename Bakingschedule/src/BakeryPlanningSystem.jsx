@@ -1,3 +1,4 @@
+// Bakery Planning System - v2.0
 import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Clock, AlertCircle, CheckCircle, RefreshCw, Upload, Edit3, Package, TrendingUp, ChevronDown, ChevronUp, Printer } from 'lucide-react';
 import _ from 'lodash';
