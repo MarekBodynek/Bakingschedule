@@ -21,7 +21,8 @@ import {
   exportAllData,
   importAllData,
   clearAllData,
-  clearGeneratedPlans
+  clearGeneratedPlans,
+  getOvenConfiguration
 } from './utils/localStorage';
 
 import {
@@ -74,11 +75,9 @@ const BakeryPlanningSystem = () => {
   const [installPassword, setInstallPassword] = useState('');
   const [installError, setInstallError] = useState('');
 
-  // ✨ Language
-  const [currentLanguage, setCurrentLanguage] = useState(() => {
-    return localStorage.getItem('appLanguage') || 'sl'; // Domyślnie słoweński
-  });
-  const t = getLanguageDictionary(currentLanguage);
+  // ✨ Language - Hardcoded to Slovenian only
+  const [currentLanguage, setCurrentLanguage] = useState('sl');
+  const t = getLanguageDictionary('sl'); // Always use Slovenian
 
   const previousDateRef = useRef(selectedDate);
 
@@ -530,17 +529,28 @@ const BakeryPlanningSystem = () => {
     const allSales = [...sales2025Local, ...sales2024Local];
     const uniqueProducts = [];
     const seen = new Set();
-    
+
+    // Load config products to get correct product names
+    const configProducts = getOvenConfiguration();
+    const configProductMap = {};
+    configProducts.forEach(cp => {
+      configProductMap[cp.sku] = cp;
+    });
+    console.log(`📋 Loaded ${configProducts.length} products from config file`);
+
     allSales.forEach(s => {
       if (!seen.has(s.eanCode)) {
         seen.add(s.eanCode);
-        
+
+        // Use name from config file if available, otherwise fall back to sales file
+        const productName = configProductMap[s.eanCode]?.name || s.productName;
+
         // 🔥 Automatyczne rozpoznawanie pakowania (np. 5x60, 3x80)
-        const packagingInfo = parsePackagingInfo(s.productName);
-        
+        const packagingInfo = parsePackagingInfo(productName);
+
         uniqueProducts.push({
           sku: s.eanCode,
-          name: s.productName,
+          name: productName,
           isKey: ['3831002150359', '3831002150205'].includes(s.eanCode),
           isPackaged: packagingInfo.isPackaged,
           packageQuantity: packagingInfo.quantity,
