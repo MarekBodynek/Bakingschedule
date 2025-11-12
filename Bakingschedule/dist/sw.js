@@ -36,6 +36,12 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - strategia network-first z fallback do cache
 self.addEventListener('fetch', (event) => {
+  // Ignoruj requesty z chrome-extension, data:, blob: itp.
+  const url = new URL(event.request.url);
+  if (!url.protocol.startsWith('http')) {
+    return;
+  }
+
   event.respondWith(
     fetch(event.request)
       .then((response) => {

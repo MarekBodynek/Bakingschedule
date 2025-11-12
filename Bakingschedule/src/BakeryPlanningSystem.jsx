@@ -1270,7 +1270,8 @@ const BakeryPlanningSystem = () => {
   // Debug info
   console.log('🔍 Render state:', { dataLoaded, showUpload, loadingStatus, productsCount: products.length, error });
 
-  if (showUpload || loadingStatus) {
+  // Pokaż ekran uploadu jeśli nie ma danych lub użytkownik go otworzył
+  if (!dataLoaded || showUpload || loadingStatus) {
     return (
       <div className="w-full max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl w-full">
@@ -1399,7 +1400,8 @@ const BakeryPlanningSystem = () => {
     );
   }
 
-  if (!dataLoaded && error) {
+  // Ekran błędu (tylko jeśli mamy dane ale wystąpił błąd podczas ich przetwarzania)
+  if (dataLoaded && error) {
     return (
       <div className="w-full max-w-4xl mx-auto p-6 bg-gray-50 min-h-screen flex items-center justify-center">
         <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
@@ -1415,13 +1417,6 @@ const BakeryPlanningSystem = () => {
         </div>
       </div>
     );
-  }
-
-  // Fallback: jeśli nie jesteśmy w żadnym stanie, pokaż ekran uploadu
-  if (!dataLoaded) {
-    console.warn('⚠️ Niespodziewany stan: dataLoaded=false ale brak ekranu uploadu/błędu. Wymuszam ekran uploadu.');
-    setShowUpload(true);
-    return null;
   }
 
   return (
