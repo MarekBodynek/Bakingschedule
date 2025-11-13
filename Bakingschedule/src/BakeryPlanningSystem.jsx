@@ -538,43 +538,52 @@ const BakeryPlanningSystem = () => {
     
     const allSales = [...sales2025Local, ...sales2024Local];
     const uniqueProducts = [];
-    const seen = new Set();
 
     // Load config products to get correct product names
     const configProducts = getOvenConfiguration();
-    const configProductMap = {};
-    configProducts.forEach(cp => {
-      configProductMap[cp.sku] = cp;
-    });
     console.log(`📋 Loaded ${configProducts.length} products from config file`);
+
     if (configProducts.length > 0) {
-      console.log(`📋 First 3 config SKUs:`, configProducts.slice(0, 3).map(p => p.sku));
-    }
-    if (allSales.length > 0) {
-      console.log(`📋 First 3 sales SKUs:`, [...new Set(allSales.map(s => s.eanCode))].slice(0, 3));
-    }
-
-    allSales.forEach(s => {
-      if (!seen.has(s.eanCode)) {
-        seen.add(s.eanCode);
-
-        // Use name from config file if available, otherwise fall back to sales file
-        const productName = configProductMap[s.eanCode]?.name || s.productName;
-
+      // Build products from CONFIG FILE (not sales file)
+      configProducts.forEach(cp => {
         // 🔥 Automatyczne rozpoznawanie pakowania (np. 5x60, 3x80)
-        const packagingInfo = parsePackagingInfo(productName);
+        const packagingInfo = parsePackagingInfo(cp.name);
 
         uniqueProducts.push({
-          sku: s.eanCode,
-          name: productName,
-          isKey: ['3831002150359', '3831002150205'].includes(s.eanCode),
+          sku: cp.sku,
+          name: cp.name,
+          isKey: ['3831002150359', '3831002150205'].includes(cp.sku),
           isPackaged: packagingInfo.isPackaged,
           packageQuantity: packagingInfo.quantity,
           packageWeight: packagingInfo.weight || 0,
           packagePattern: packagingInfo.pattern || ''
         });
-      }
-    });
+
+        if (packagingInfo.isPackaged) {
+          console.log(`📦 Pakowany produkt: ${cp.name} (${packagingInfo.quantity}x)`);
+        }
+      });
+    } else {
+      // Fallback: if no config file, build from sales data
+      const seen = new Set();
+      allSales.forEach(s => {
+        if (!seen.has(s.eanCode)) {
+          seen.add(s.eanCode);
+
+          const packagingInfo = parsePackagingInfo(s.productName);
+
+          uniqueProducts.push({
+            sku: s.eanCode,
+            name: s.productName,
+            isKey: ['3831002150359', '3831002150205'].includes(s.eanCode),
+            isPackaged: packagingInfo.isPackaged,
+            packageQuantity: packagingInfo.quantity,
+            packageWeight: packagingInfo.weight || 0,
+            packagePattern: packagingInfo.pattern || ''
+          });
+        }
+      });
+    }
     
     setProducts(uniqueProducts);
 
