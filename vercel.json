@@ -1,7 +1,7 @@
 {
-  "buildCommand": "echo 'Using pre-built dist'",
+  "buildCommand": "cd Bakingschedule && npm run build",
   "outputDirectory": "Bakingschedule/dist",
-  "installCommand": "echo 'No install needed'",
+  "installCommand": "cd Bakingschedule && npm install",
   "framework": null,
   "devCommand": "cd Bakingschedule && npm run dev",
   "public": true
