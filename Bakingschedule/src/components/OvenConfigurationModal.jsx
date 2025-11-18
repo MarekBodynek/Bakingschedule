@@ -100,6 +100,12 @@ const OvenConfigurationModal = ({
       const worksheet = workbook.Sheets[sheetName];
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
 
+      // 🔍 DEBUG: Show first 10 rows to understand file structure
+      console.log('📄 First 10 rows of config file:');
+      jsonData.slice(0, 10).forEach((row, idx) => {
+        console.log(`Row ${idx}:`, row.slice(0, 12)); // Show first 12 columns
+      });
+
       // Parse data - skip first 4 rows (store name, empty, section headers, column headers)
       const products = [];
       const programs = new Set();
@@ -147,14 +153,21 @@ const OvenConfigurationModal = ({
           const program = parseInt(row[2]);
           const unitsOnTray = parseInt(row[3]);
 
+          // 🔍 DEBUG: Log each row being parsed
+          if (i < 10) { // Log first few product rows
+            console.log(`🔍 Row ${i} - EAN: "${eanCode}", Name: "${name}", Program: ${program}, Units: ${unitsOnTray}`);
+          }
+
           // Stop if we hit info rows (oven config, program durations, etc.)
           if (eanCode.toLowerCase().includes('oven') ||
               eanCode.toLowerCase().includes('program')) {
+            console.log(`🛑 Stopped parsing at row ${i} (found oven/program info)`);
             break;
           }
 
           // Pomiń puste wiersze
           if (!eanCode || !name || !program || !unitsOnTray) {
+            if (i < 10) console.log(`⏭️ Skipping row ${i} (missing data)`);
             continue;
           }
 
@@ -174,6 +187,14 @@ const OvenConfigurationModal = ({
         setUploadStatus('');
         return;
       }
+
+      // 🔍 DEBUG: Show all parsed products
+      console.log('📦 Parsed products:', products.length);
+      products.forEach((p, idx) => {
+        if (idx < 5) { // Show first 5 products
+          console.log(`  ${idx + 1}. SKU: "${p.sku}", Name: "${p.name}", Program: ${p.program}, Units: ${p.unitsPerTray}`);
+        }
+      });
 
       setProductConfig(products);
 

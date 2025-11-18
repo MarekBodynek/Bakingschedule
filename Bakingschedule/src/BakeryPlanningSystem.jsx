@@ -313,20 +313,11 @@ const BakeryPlanningSystem = () => {
     // Znajdź indeksy dla każdej nazwy kolumny
     const indices = {};
     columnNames.forEach(name => {
-      // Najpierw szukaj EXACT match
-      let index = headerRow.findIndex(cell => {
+      const index = headerRow.findIndex(cell => {
         const cellText = String(cell || '').toUpperCase().trim();
-        return cellText === name.toUpperCase();
+        // Dla nagłówków używaj dokładnego dopasowania lub zawierania w krótkim tekście
+        return cellText.length < 20 && cellText.includes(name.toUpperCase());
       });
-
-      // Jeśli nie znaleziono exact match, szukaj jako substring - ALE NIE DLA NAZIV (tylko exact match)
-      if (index === -1 && name !== 'NAZIV') {
-        index = headerRow.findIndex(cell => {
-          const cellText = String(cell || '').toUpperCase().trim();
-          return cellText.length < 20 && cellText.includes(name.toUpperCase());
-        });
-      }
-
       if (index !== -1) {
         indices[name] = index;
       }
@@ -538,52 +529,52 @@ const BakeryPlanningSystem = () => {
     
     const allSales = [...sales2025Local, ...sales2024Local];
     const uniqueProducts = [];
+    const seen = new Set();
 
     // Load config products to get correct product names
     const configProducts = getOvenConfiguration();
+    const configProductMap = {};
+    configProducts.forEach(cp => {
+      configProductMap[cp.sku] = cp;
+    });
     console.log(`📋 Loaded ${configProducts.length} products from config file`);
 
+    // 🔍 DEBUG: Show first few config products
     if (configProducts.length > 0) {
-      // Build products from CONFIG FILE (not sales file)
-      configProducts.forEach(cp => {
+      console.log('📋 First 5 config products:');
+      configProducts.slice(0, 5).forEach((p, idx) => {
+        console.log(`  ${idx + 1}. SKU: "${p.sku}", Name: "${p.name}"`);
+      });
+    }
+
+    let debugCount = 0;
+    allSales.forEach(s => {
+      if (!seen.has(s.eanCode)) {
+        seen.add(s.eanCode);
+
+        // Use name from config file if available, otherwise fall back to sales file
+        const productName = configProductMap[s.eanCode]?.name || s.productName;
+
+        // 🔍 DEBUG: Log first few product name mappings
+        if (debugCount < 5) {
+          console.log(`🔍 Product ${debugCount + 1}: EAN "${s.eanCode}" -> Config name: "${configProductMap[s.eanCode]?.name || 'NOT FOUND'}", Sales name: "${s.productName}", Final: "${productName}"`);
+          debugCount++;
+        }
+
         // 🔥 Automatyczne rozpoznawanie pakowania (np. 5x60, 3x80)
-        const packagingInfo = parsePackagingInfo(cp.name);
+        const packagingInfo = parsePackagingInfo(productName);
 
         uniqueProducts.push({
-          sku: cp.sku,
-          name: cp.name,
-          isKey: ['3831002150359', '3831002150205'].includes(cp.sku),
+          sku: s.eanCode,
+          name: productName,
+          isKey: ['3831002150359', '3831002150205'].includes(s.eanCode),
           isPackaged: packagingInfo.isPackaged,
           packageQuantity: packagingInfo.quantity,
           packageWeight: packagingInfo.weight || 0,
           packagePattern: packagingInfo.pattern || ''
         });
-
-        if (packagingInfo.isPackaged) {
-          console.log(`📦 Pakowany produkt: ${cp.name} (${packagingInfo.quantity}x)`);
-        }
-      });
-    } else {
-      // Fallback: if no config file, build from sales data
-      const seen = new Set();
-      allSales.forEach(s => {
-        if (!seen.has(s.eanCode)) {
-          seen.add(s.eanCode);
-
-          const packagingInfo = parsePackagingInfo(s.productName);
-
-          uniqueProducts.push({
-            sku: s.eanCode,
-            name: s.productName,
-            isKey: ['3831002150359', '3831002150205'].includes(s.eanCode),
-            isPackaged: packagingInfo.isPackaged,
-            packageQuantity: packagingInfo.quantity,
-            packageWeight: packagingInfo.weight || 0,
-            packagePattern: packagingInfo.pattern || ''
-          });
-        }
-      });
-    }
+      }
+    });
     
     setProducts(uniqueProducts);
 
