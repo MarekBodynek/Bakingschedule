@@ -59,6 +59,12 @@ const BakeryPlanningSystem = () => {
   const [activeTab, setActiveTab] = useState('plan'); // 'plan', 'trays', 'metrics'
   const [showBuffers, setShowBuffers] = useState(true); // Pokaži/skrij bufferje
 
+  // ✅ OPT 2.1: Lookup maps for O(1) access instead of O(n) filtering
+  const [salesLookupMaps, setSalesLookupMaps] = useState(null);
+
+  // ✅ OPT 2.2: Holiday cache to avoid recalculating Easter 100+ times
+  const [holidayCache, setHolidayCache] = useState({});
+
   const previousDateRef = useRef(selectedDate);
 
   const handleDateChange = (e) => {
@@ -487,42 +493,99 @@ const BakeryPlanningSystem = () => {
     return { isPackaged: false, quantity: 1 };
   };
 
-  useEffect(() => { 
+  useEffect(() => {
     // Bezpośrednio pokazujemy ekran uploadu zamiast próbować automatycznego ładowania
-    setShowUpload(true); 
+    setShowUpload(true);
   }, []);
 
+  // ✅ OPT 2.1: Build lookup maps when sales data changes
+  useEffect(() => {
+    if (salesData2025.length > 0 || salesData2024.length > 0) {
+      console.log('📊 Building sales lookup maps for O(1) access...');
+      const startTime = performance.now();
+
+      const maps = {
+        // Group by SKU for quick product lookup
+        sales2025BySku: _.groupBy(salesData2025, 'eanCode'),
+        sales2024BySku: _.groupBy(salesData2024, 'eanCode'),
+        wasteBySku: _.groupBy(wasteData, 'eanCode'),
+
+        // Pre-grouped by SKU and day of week for even faster access
+        sales2025BySkuAndDay: {},
+        sales2024BySkuAndDay: {}
+      };
+
+      // Build day-of-week indexes (0=Sunday, 6=Saturday)
+      for (let day = 0; day <= 6; day++) {
+        const filtered2025 = salesData2025.filter(s => s.dayOfWeek === day);
+        const filtered2024 = salesData2024.filter(s => s.dayOfWeek === day);
+
+        maps.sales2025BySkuAndDay[day] = _.groupBy(filtered2025, 'eanCode');
+        maps.sales2024BySkuAndDay[day] = _.groupBy(filtered2024, 'eanCode');
+      }
+
+      setSalesLookupMaps(maps);
+      const endTime = performance.now();
+      console.log(`✅ Lookup maps built in ${(endTime - startTime).toFixed(0)}ms - ${Object.keys(maps.sales2025BySku).length} products indexed`);
+    }
+  }, [salesData2025, salesData2024, wasteData]);
+
+  // ✅ OPT 2.2: Build holiday cache when date changes
+  useEffect(() => {
+    const year = new Date(selectedDate).getFullYear();
+    const prevYear = year - 1;
+    const nextYear = year + 1;
+
+    // Only rebuild if we don't have cache for needed years
+    if (!holidayCache[year] || !holidayCache[prevYear]) {
+      console.log(`📅 Building holiday cache for ${prevYear}-${nextYear}...`);
+
+      const newCache = {
+        [prevYear]: getSlovenianHolidays(prevYear),
+        [year]: getSlovenianHolidays(year),
+        [nextYear]: getSlovenianHolidays(nextYear)
+      };
+
+      setHolidayCache(newCache);
+      console.log(`✅ Holiday cache built: ${Object.values(newCache).flat().length} holidays indexed`);
+    }
+  }, [selectedDate]);
+
   const calculateDynamicBuffer = (sku, targetDate, waveHours) => {
-    const productSales = salesData2025.filter(s => s.eanCode === sku);
+    // ✅ OPT 2.1: Use lookup map instead of filtering entire array
+    const productSales = salesLookupMaps?.sales2025BySku[sku] || [];
     if (productSales.length === 0) return { buffer: 0.15, reason: 'Ni podatkov, privzeta rezerva' };
-    
+
     if (isHighSalesDay(targetDate)) {
       return { buffer: 0, reason: 'Zgodovinski podatki vključujejo povpraševanje' };
     }
-    
+
     const fourWeeksAgo = new Date(targetDate);
     fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-    
-    const recentDays = productSales.filter(s => 
+
+    const recentDays = productSales.filter(s =>
       s.date >= fourWeeksAgo && waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
     );
-    
+
     if (recentDays.length < 10) {
       return { buffer: 0.15, reason: 'Omejeni podatki, privzeta rezerva' };
     }
     
     const byDate = _.groupBy(recentDays, 'dateStr');
-    const dailyData = Object.entries(byDate).map(([date, sales]) => ({
+    const rawDailyData = Object.entries(byDate).map(([date, sales]) => ({
       date,
       total: _.sumBy(sales, 'quantity'),
       isWeekend: new Date(date).getDay() === 0 || new Date(date).getDay() === 6
     }));
-    
+
+    // ✅ IMPL 2.1: Smooth anomalies before CV calculation
+    const dailyData = smoothAnomalies(rawDailyData, 0.30);
+
     const weekdayDays = dailyData.filter(d => !d.isWeekend);
     if (weekdayDays.length < 3) {
       return { buffer: 0.15, reason: 'Nezadostni podatki za delovne dni' };
     }
-    
+
     const weekdayAvg = _.meanBy(weekdayDays, 'total');
     const weekdayStdDev = Math.sqrt(_.meanBy(weekdayDays, d => Math.pow(d.total - weekdayAvg, 2)));
     const weekdayCV = weekdayStdDev / weekdayAvg;
@@ -565,10 +628,51 @@ const BakeryPlanningSystem = () => {
     };
   };
 
+  // ✅ IMPL 2.1: Anomaly smoothing - replace outliers >30% deviation from median
+  const smoothAnomalies = (dailyData, threshold = 0.30) => {
+    if (dailyData.length < 3) return dailyData;
+
+    // Calculate median
+    const quantities = dailyData.map(d => d.total || d.quantity).sort((a, b) => a - b);
+    const mid = Math.floor(quantities.length / 2);
+    const median = quantities.length % 2 !== 0
+      ? quantities[mid]
+      : (quantities[mid - 1] + quantities[mid]) / 2;
+
+    if (median === 0) return dailyData;
+
+    // Smooth outliers
+    let smoothedCount = 0;
+    const smoothed = dailyData.map(d => {
+      const value = d.total || d.quantity;
+      const deviation = Math.abs(value - median) / median;
+
+      if (deviation > threshold) {
+        smoothedCount++;
+        return {
+          ...d,
+          total: d.total !== undefined ? median : d.total,
+          quantity: d.quantity !== undefined ? median : d.quantity,
+          wasSmoothed: true,
+          originalValue: value
+        };
+      }
+      return { ...d, wasSmoothed: false };
+    });
+
+    if (smoothedCount > 0) {
+      console.log(`📊 Smoothed ${smoothedCount} anomalies (>${threshold * 100}% from median ${median.toFixed(1)})`);
+    }
+
+    return smoothed;
+  };
+
   const calculateHistoricalAverage = (sku, targetDate, waveHours) => {
     const targetDayOfWeek = new Date(targetDate).getDay();
-    const productSales2025 = salesData2025.filter(s => s.eanCode === sku);
-    const productSales2024 = salesData2024.filter(s => s.eanCode === sku);
+
+    // ✅ OPT 2.1: Use lookup maps for O(1) access instead of O(n) filtering
+    const productSales2025 = salesLookupMaps?.sales2025BySku[sku] || [];
+    const productSales2024 = salesLookupMaps?.sales2024BySku[sku] || [];
 
     // ✅ USE ML WEIGHTS - learned from corrections and stockouts
     const mlWeights = getMLWeights(sku);
@@ -1102,6 +1206,184 @@ const BakeryPlanningSystem = () => {
     // ✨ ZAPISZ PLAN DO LOCALSTORAGE
     savePlan(selectedDate, newPlans);
     console.log(`💾 Plan saved for ${selectedDate}`);
+  };
+
+  // ✅ IMPL 2.2: Real-time Wave 2 generation with morning performance adaptation
+  const generateWave2RealTime = async (actualMorningSales) => {
+    if (!plans[1]) {
+      console.error('❌ Wave 1 must be generated first!');
+      return;
+    }
+
+    console.log('📊 Generating Wave 2 with real-time adaptation...');
+    setIsGenerating(true);
+
+    const newPlan = {};
+    const waveHours = { 2: [12, 13, 14, 15] };
+
+    for (const product of products) {
+      const sku = product.sku;
+      const wave1Plan = plans[1][sku];
+
+      if (!wave1Plan) continue;
+
+      // Get actual sales for this product (7:00-12:00)
+      const actualSales = actualMorningSales?.[sku] || 0;
+      const wave1Forecast = wave1Plan.quantity;
+
+      // Calculate deviation from forecast
+      const deviation = wave1Forecast > 0 ? (actualSales / wave1Forecast) - 1 : 0;
+
+      // Detect potential stockout (sold all or very close)
+      const stockoutDetected = actualSales >= wave1Forecast * 0.95;
+
+      // Calculate adjustment factor based on deviation
+      let adjustmentFactor = 1.0;
+      let reason = '';
+
+      if (deviation > 0.20) {
+        // Sales 20%+ higher than forecast
+        if (stockoutDetected) {
+          adjustmentFactor = 1.35; // +35% aggressive
+          reason = '🚨 Stockout v Wave 1 - agresivno povečanje';
+        } else {
+          adjustmentFactor = 1.15; // +15% cautious
+          reason = '📈 Prodaja nad napovedjo - previdno povečanje';
+        }
+      } else if (deviation >= -0.20 && deviation <= 0.20) {
+        adjustmentFactor = 1.0;
+        reason = '✅ Prodaja skladno z napovedjo';
+      } else {
+        // Sales 20%+ lower
+        adjustmentFactor = 0.85; // -15%
+        reason = '📉 Prodaja pod napovedjo - zmanjšanje';
+      }
+
+      // Get base afternoon forecast
+      const baseAfternoon = calculateHistoricalAverage(sku, selectedDate, waveHours[2]);
+
+      // Apply adjustment
+      const adjustedForecast = baseAfternoon * adjustmentFactor;
+
+      // Apply medium buffer
+      const bufferPercent = stockoutDetected ? 0.15 : 0.10;
+      const finalQuantity = Math.max(0, Math.round(adjustedForecast * (1 + bufferPercent)));
+
+      newPlan[sku] = {
+        quantity: finalQuantity,
+        historical: Math.round(baseAfternoon),
+        buffer: Math.round(bufferPercent * 100),
+        adjustmentFactor: adjustmentFactor,
+        adjustmentReason: reason,
+        wave1Performance: {
+          planned: wave1Forecast,
+          actual: actualSales,
+          deviation: `${(deviation * 100).toFixed(0)}%`,
+          stockout: stockoutDetected
+        },
+        isPackaged: product.isPackaged
+      };
+
+      // Log stockout for ML learning
+      if (stockoutDetected) {
+        console.log(`🚨 Stockout detected for ${product.name} in Wave 1`);
+      }
+    }
+
+    // Update plans
+    const updatedPlans = { ...plans, 2: newPlan };
+    setPlans(updatedPlans);
+    savePlan(selectedDate, updatedPlans);
+
+    setIsGenerating(false);
+    console.log('✅ Wave 2 generated with real-time adaptation');
+  };
+
+  // ✅ IMPL 2.3: Real-time Wave 3 generation with full day performance adaptation
+  const generateWave3RealTime = async (actualDaySales) => {
+    if (!plans[1] || !plans[2]) {
+      console.error('❌ Waves 1 and 2 must be generated first!');
+      return;
+    }
+
+    console.log('📊 Generating Wave 3 with real-time adaptation...');
+    setIsGenerating(true);
+
+    const newPlan = {};
+    const waveHours = { 3: [16, 17, 18, 19] };
+
+    for (const product of products) {
+      const sku = product.sku;
+      const wave1Plan = plans[1][sku];
+      const wave2Plan = plans[2][sku];
+
+      if (!wave1Plan || !wave2Plan) continue;
+
+      // Get actual sales (7:00-16:00)
+      const actualSales = actualDaySales?.[sku] || 0;
+      const totalForecast = wave1Plan.quantity + wave2Plan.quantity;
+
+      // Calculate sales rate ratio
+      const salesRateRatio = totalForecast > 0 ? actualSales / totalForecast : 0;
+
+      // Base evening forecast
+      const baseEvening = calculateHistoricalAverage(sku, selectedDate, waveHours[3]);
+
+      let adjustmentFactor = 1.0;
+      let buffer = -0.10; // Default conservative for evening
+      let reason = '';
+
+      if (salesRateRatio < 0.5) {
+        // Very slow day - ultra conservative
+        adjustmentFactor = 0.5;
+        buffer = -0.20;
+        reason = '📉 Zelo počasen dan - minimalna peka';
+      } else if (salesRateRatio < 0.8) {
+        // Slower than expected
+        adjustmentFactor = 0.7;
+        buffer = -0.15;
+        reason = '📉 Počasnejši dan - zmanjšana peka';
+      } else if (salesRateRatio > 1.2) {
+        // Much higher than expected
+        adjustmentFactor = 1.3;
+        buffer = 0.05;
+        reason = '📈 Izjemno dober dan - povečana peka';
+      } else {
+        // On track
+        reason = '✅ Dan po načrtu - standardna peka';
+      }
+
+      const adjustedForecast = baseEvening * adjustmentFactor;
+      let finalQuantity = Math.max(0, Math.round(adjustedForecast * (1 + buffer)));
+
+      // Minimum for key products
+      if (product.isKey && finalQuantity < 5) {
+        finalQuantity = 5;
+        reason = 'Minimum ključnega izdelka (5 kos)';
+      }
+
+      newPlan[sku] = {
+        quantity: finalQuantity,
+        historical: Math.round(baseEvening),
+        buffer: Math.round(buffer * 100),
+        adjustmentFactor: adjustmentFactor,
+        adjustmentReason: reason,
+        dayPerformance: {
+          planned: totalForecast,
+          actual: actualSales,
+          ratio: `${(salesRateRatio * 100).toFixed(0)}%`
+        },
+        isPackaged: product.isPackaged
+      };
+    }
+
+    // Update plans
+    const updatedPlans = { ...plans, 3: newPlan };
+    setPlans(updatedPlans);
+    savePlan(selectedDate, updatedPlans);
+
+    setIsGenerating(false);
+    console.log('✅ Wave 3 generated with real-time adaptation');
   };
 
   const getTotalPlanned = (wave) => plans[wave] ? Object.values(plans[wave]).reduce((sum, p) => sum + p.quantity, 0) : 0;
