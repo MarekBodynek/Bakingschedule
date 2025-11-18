@@ -36,6 +36,7 @@ const OvenConfigurationModal = ({
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
   const [showAllProducts, setShowAllProducts] = useState(false);
+  const [waveConfig, setWaveConfig] = useState({}); // Opening Hours and Waves
 
   // Wczytaj zapisaną konfigurację
   useEffect(() => {
@@ -111,6 +112,7 @@ const OvenConfigurationModal = ({
       const programs = new Set();
       const ovenCapacities = [];
       const detectedProgramDurations = {};
+      const openingHoursAndWaves = {};
 
       for (let i = 0; i < jsonData.length; i++) {
         const row = jsonData[i];
@@ -143,6 +145,53 @@ const OvenConfigurationModal = ({
                 console.log(`⏱️ Detected Program ${programNum}: ${duration} minutes`);
               }
             }
+          }
+        }
+
+        // Parse Opening Hours and Waves from columns L-T (indices 11-19)
+        // Row 3-9: Monday-Sunday data
+        if (i >= 2 && i <= 8) {
+          const dayOfWeek = String(row[11] || '').trim().toLowerCase();
+          const opening = String(row[12] || '').trim();
+          const closing = String(row[13] || '').trim();
+          const wave1Start = String(row[14] || '').trim();
+          const wave1Finish = String(row[15] || '').trim();
+          const wave2Start = String(row[16] || '').trim();
+          const wave2Finish = String(row[17] || '').trim();
+          const wave3Start = String(row[18] || '').trim();
+          const wave3Finish = String(row[19] || '').trim();
+
+          if (dayOfWeek && (opening || closing)) {
+            // Calculate baking times (1 hour before wave start)
+            const calcBakingTime = (waveStart) => {
+              if (!waveStart || waveStart === 'closed') return '';
+              const [hours, minutes] = waveStart.split(':').map(Number);
+              const bakingHour = hours - 1;
+              return `${bakingHour.toString().padStart(2, '0')}:${(minutes || 0).toString().padStart(2, '0')}`;
+            };
+
+            openingHoursAndWaves[dayOfWeek] = {
+              opening,
+              closing,
+              wave1: {
+                start: wave1Start,
+                finish: wave1Finish,
+                bakingTime: calcBakingTime(wave1Start)
+              },
+              wave2: wave2Start ? {
+                start: wave2Start,
+                finish: wave2Finish,
+                bakingTime: calcBakingTime(wave2Start)
+              } : null,
+              wave3: {
+                start: wave3Start,
+                finish: wave3Finish,
+                bakingTime: calcBakingTime(wave3Start)
+              },
+              isClosed: opening === 'closed' || closing === 'closed'
+            };
+
+            console.log(`📅 ${dayOfWeek}: ${opening}-${closing}, Wave1: ${wave1Start}-${wave1Finish} (bake: ${calcBakingTime(wave1Start)}), Wave2: ${wave2Start || 'none'}, Wave3: ${wave3Start}-${wave3Finish}`);
           }
         }
 
@@ -196,7 +245,16 @@ const OvenConfigurationModal = ({
         }
       });
 
+      // 🔍 DEBUG: Show parsed Opening Hours and Waves
+      console.log('📅 Parsed Opening Hours and Waves:', Object.keys(openingHoursAndWaves).length, 'days');
+      Object.entries(openingHoursAndWaves).forEach(([day, config]) => {
+        if (!config.isClosed) {
+          console.log(`  ${day}: Wave1 baking=${config.wave1.bakingTime}, Wave2 baking=${config.wave2?.bakingTime || 'none'}, Wave3 baking=${config.wave3.bakingTime}`);
+        }
+      });
+
       setProductConfig(products);
+      setWaveConfig(openingHoursAndWaves);
 
       // Inicjalizuj programy z wykrytymi czasami
       const newProgramConfig = { ...programConfig };
@@ -278,7 +336,8 @@ const OvenConfigurationModal = ({
 
     const configToSave = {
       ...programConfig,
-      ovenSettings: ovenSettings
+      ovenSettings: ovenSettings,
+      waveConfig: waveConfig // Include wave configuration
     };
     saveProgramConfiguration(configToSave);
 
@@ -287,7 +346,7 @@ const OvenConfigurationModal = ({
     setTimeout(() => {
       setUploadStatus('');
       if (onSave) {
-        onSave({ productConfig, programConfig, ovenSettings });
+        onSave({ productConfig, programConfig, ovenSettings, waveConfig });
       }
       onClose();
     }, 1500);
