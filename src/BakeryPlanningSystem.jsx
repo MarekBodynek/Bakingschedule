@@ -667,6 +667,77 @@ const BakeryPlanningSystem = () => {
     return smoothed;
   };
 
+  /**
+   * ✅ IMPL 3.2: Find similar products based on name patterns
+   * Used as fallback for new products without history
+   */
+  const findSimilarProducts = (currentSku, productName, allProducts) => {
+    // Extract key words from product name
+    const nameLower = productName.toLowerCase();
+    const keywords = nameLower.split(/[\s\-_,]+/).filter(word => word.length > 2);
+
+    // Define product categories based on common bakery patterns
+    const categoryPatterns = {
+      bread: ['kruh', 'kruha', 'bread', 'hljeb', 'baguette'],
+      pastry: ['croissant', 'rogljič', 'puff', 'burek', 'štrudelj'],
+      pizza: ['pizza', 'focaccia', 'lepinja'],
+      sweet: ['čokolada', 'chocolate', 'vanilija', 'jagoda', 'sladka'],
+      packaged: ['pak', 'pack', 'paket']
+    };
+
+    // Determine product category
+    let currentCategory = 'other';
+    for (const [category, patterns] of Object.entries(categoryPatterns)) {
+      if (patterns.some(pattern => nameLower.includes(pattern))) {
+        currentCategory = category;
+        break;
+      }
+    }
+
+    // Score similar products
+    const scored = allProducts
+      .filter(p => p.sku !== currentSku)
+      .map(product => {
+        const otherName = product.name.toLowerCase();
+        let score = 0;
+
+        // Same category bonus (+50)
+        for (const [category, patterns] of Object.entries(categoryPatterns)) {
+          if (patterns.some(pattern => otherName.includes(pattern))) {
+            if (category === currentCategory) {
+              score += 50;
+            }
+            break;
+          }
+        }
+
+        // Keyword matches (+10 each)
+        keywords.forEach(keyword => {
+          if (otherName.includes(keyword)) {
+            score += 10;
+          }
+        });
+
+        // Same packaging type bonus (+20)
+        const currentProduct = allProducts.find(p => p.sku === currentSku);
+        if (currentProduct && product.isPackaged === currentProduct.isPackaged) {
+          score += 20;
+        }
+
+        // Key product status match (+15)
+        if (currentProduct && product.isKey === currentProduct.isKey) {
+          score += 15;
+        }
+
+        return { ...product, similarityScore: score };
+      })
+      .filter(p => p.similarityScore > 0)
+      .sort((a, b) => b.similarityScore - a.similarityScore);
+
+    // Return top 3 similar products
+    return scored.slice(0, 3);
+  };
+
   const calculateHistoricalAverage = (sku, targetDate, waveHours) => {
     const targetDayOfWeek = new Date(targetDate).getDay();
 
@@ -862,7 +933,53 @@ const BakeryPlanningSystem = () => {
       }
     }
 
-    if (weights.length === 0) return 0;
+    // ✅ IMPL 3.2: New product handling - use similar product fallback
+    if (weights.length === 0) {
+      // Find product info to get category
+      const currentProduct = products.find(p => p.sku === sku);
+      if (currentProduct) {
+        console.log(`🆕 New product detected: ${currentProduct.name} (${sku}) - searching for similar products...`);
+
+        // Find similar products in the same category based on name patterns
+        const similarProducts = findSimilarProducts(sku, currentProduct.name, products);
+
+        if (similarProducts.length > 0) {
+          // Use the most similar product's data as fallback
+          const bestMatch = similarProducts[0];
+          const bestMatchSales2025 = salesLookupMaps?.sales2025BySku[bestMatch.sku] || [];
+
+          if (bestMatchSales2025.length > 0) {
+            // Calculate average for similar product
+            const fourWeeksAgo = new Date(targetDate);
+            fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+            const recentSales = bestMatchSales2025.filter(s =>
+              s.dayOfWeek === targetDayOfWeek && s.date >= fourWeeksAgo &&
+              waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
+            );
+
+            if (recentSales.length > 0) {
+              const byDate = _.groupBy(recentSales, 'dateStr');
+              const uniqueDates = Object.keys(byDate);
+              const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+              const totalQuantity = _.sumBy(dailyTotals);
+              const avgPerDay = totalQuantity / Math.max(1, uniqueDates.length);
+
+              // Apply conservative factor for new products (80%)
+              const conservativeForecast = avgPerDay * 0.8;
+              console.log(`✅ Using similar product "${bestMatch.name}" as fallback: ${avgPerDay.toFixed(1)} × 0.8 = ${conservativeForecast.toFixed(1)}`);
+
+              return conservativeForecast;
+            }
+          }
+        }
+
+        // Ultimate fallback: minimum quantity for new products
+        console.log(`⚠️ No similar product found for ${currentProduct.name} - using minimum quantity`);
+        return currentProduct.isKey ? 5 : 2;
+      }
+
+      return 0;
+    }
 
     const totalWeight = _.sumBy(weights, 'weight');
     const weightedSum = _.sumBy(weights, w => w.value * w.weight);
@@ -1721,6 +1838,26 @@ const BakeryPlanningSystem = () => {
               }`}>
               {!plans[1] ? '⏸ Čakanje' : 'Ponovno generiraj Val 2'}
             </button>
+            {/* ✅ IMPL 3.3: Real-time Wave 2 button */}
+            {plans[1] && (
+              <button
+                onClick={() => {
+                  const actualSales = prompt('Vnesi dejansko prodajo do 12:30 (JSON format ali skupna številka):');
+                  if (actualSales) {
+                    try {
+                      const parsed = isNaN(actualSales) ? JSON.parse(actualSales) : { total: parseInt(actualSales) };
+                      generateWave2RealTime(parsed);
+                    } catch (e) {
+                      alert('Napaka: ' + e.message);
+                    }
+                  }
+                }}
+                disabled={isGenerating}
+                className="w-full mt-2 py-1 rounded text-sm font-semibold bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors"
+              >
+                ⚡ Real-time adaptacija
+              </button>
+            )}
           </div>
 
           <div className={`p-4 rounded-lg border-2 ${plans[3] ? 'bg-orange-50 border-orange-300 shadow-md' : 'bg-gray-50 border-gray-200'}`}>
@@ -1738,6 +1875,26 @@ const BakeryPlanningSystem = () => {
               }`}>
               {!plans[1] ? '⏸ Čakanje' : 'Ponovno generiraj Val 3'}
             </button>
+            {/* ✅ IMPL 3.3: Real-time Wave 3 button */}
+            {plans[1] && plans[2] && (
+              <button
+                onClick={() => {
+                  const actualSales = prompt('Vnesi dejansko prodajo do 16:00 (JSON format ali skupna številka):');
+                  if (actualSales) {
+                    try {
+                      const parsed = isNaN(actualSales) ? JSON.parse(actualSales) : { total: parseInt(actualSales) };
+                      generateWave3RealTime(parsed);
+                    } catch (e) {
+                      alert('Napaka: ' + e.message);
+                    }
+                  }
+                }}
+                disabled={isGenerating}
+                className="w-full mt-2 py-1 rounded text-sm font-semibold bg-orange-100 hover:bg-orange-200 text-orange-700 transition-colors"
+              >
+                ⚡ Real-time adaptacija
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1968,6 +2125,8 @@ const BakeryPlanningSystem = () => {
                     products={products}
                     wavePlan={plans[1]}
                     waveNumber={1}
+                    salesData={salesData2025}
+                    stockoutHistory={detectedStockouts}
                   />
                 </div>
 
@@ -1977,6 +2136,8 @@ const BakeryPlanningSystem = () => {
                     products={products}
                     wavePlan={plans[2]}
                     waveNumber={2}
+                    salesData={salesData2025}
+                    stockoutHistory={detectedStockouts}
                   />
                 </div>
 
@@ -1986,6 +2147,8 @@ const BakeryPlanningSystem = () => {
                     products={products}
                     wavePlan={plans[3]}
                     waveNumber={3}
+                    salesData={salesData2025}
+                    stockoutHistory={detectedStockouts}
                   />
                 </div>
               </div>
