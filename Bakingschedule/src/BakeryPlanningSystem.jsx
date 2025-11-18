@@ -70,6 +70,18 @@ const BakeryPlanningSystem = () => {
   const [expandedWaves, setExpandedWaves] = useState({ 1: false, 2: false, 3: false }); // Rozwinięcie fal - domyślnie zwinięte
   const [showResetModal, setShowResetModal] = useState(false); // Modal potwierdzenia resetu
 
+  // ✨ Wave Configuration - default values matching current hardcoded times
+  const [waveConfig, setWaveConfig] = useState({
+    default: {
+      opening: '07:00',
+      closing: '20:00',
+      wave1: { start: '07:00', finish: '12:00', bakingTime: '06:00' },
+      wave2: { start: '12:00', finish: '16:00', bakingTime: '11:00' },
+      wave3: { start: '16:00', finish: '20:00', bakingTime: '15:00' },
+      isClosed: false
+    }
+  });
+
   // PWA Installation
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
@@ -132,6 +144,55 @@ const BakeryPlanningSystem = () => {
       ...prev,
       [waveNumber]: !prev[waveNumber]
     }));
+  };
+
+  // Helper function to get wave configuration for a specific date
+  const getWaveConfigForDate = (dateStr) => {
+    const date = new Date(dateStr);
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayOfWeek = dayNames[date.getDay()];
+
+    // Return day-specific config if available, otherwise default
+    if (waveConfig[dayOfWeek]) {
+      return waveConfig[dayOfWeek];
+    }
+    return waveConfig.default || {
+      opening: '07:00',
+      closing: '20:00',
+      wave1: { start: '07:00', finish: '12:00', bakingTime: '06:00' },
+      wave2: { start: '12:00', finish: '16:00', bakingTime: '11:00' },
+      wave3: { start: '16:00', finish: '20:00', bakingTime: '15:00' },
+      isClosed: false
+    };
+  };
+
+  // Helper function to format wave time display (e.g., "6:00 → 7:00-12:00")
+  const formatWaveTime = (waveData) => {
+    if (!waveData || !waveData.start) return '';
+    const bakingTime = waveData.bakingTime || '';
+    const start = waveData.start || '';
+    const finish = waveData.finish || '';
+    return `${bakingTime} → ${start}-${finish}`;
+  };
+
+  // Helper function to format wave hours range (e.g., "7-12")
+  const formatWaveHours = (waveData) => {
+    if (!waveData || !waveData.start) return '';
+    const startHour = parseInt(waveData.start.split(':')[0]);
+    const finishHour = parseInt(waveData.finish.split(':')[0]);
+    return `${startHour}-${finishHour}`;
+  };
+
+  // Helper function to generate array of hours for a wave (e.g., [7,8,9,10,11] for 7:00-12:00)
+  const getWaveHoursArray = (waveData) => {
+    if (!waveData || !waveData.start || !waveData.finish) return [];
+    const startHour = parseInt(waveData.start.split(':')[0]);
+    const finishHour = parseInt(waveData.finish.split(':')[0]);
+    const hours = [];
+    for (let h = startHour; h < finishHour; h++) {
+      hours.push(h);
+    }
+    return hours;
   };
 
   const calculateEaster = (year) => {
@@ -1037,8 +1098,14 @@ const BakeryPlanningSystem = () => {
     
     setIsGenerating(true);
     await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const waveHours = { 1: [7,8,9,10,11], 2: [12,13,14,15], 3: [16,17,18,19] };
+
+    // Get wave hours dynamically from configuration
+    const dayConfig = getWaveConfigForDate(selectedDate);
+    const waveHours = {
+      1: getWaveHoursArray(dayConfig.wave1),
+      2: dayConfig.wave2 ? getWaveHoursArray(dayConfig.wave2) : [],
+      3: getWaveHoursArray(dayConfig.wave3)
+    };
     const wavesToGenerate = wave === 1 ? [1, 2, 3] : [wave];
     const newPlans = { ...plans };
     
@@ -1572,7 +1639,7 @@ const BakeryPlanningSystem = () => {
               <span className="font-bold text-lg">{t?.wave1 || 'Val 1'}</span>
               {plans[1] && <CheckCircle className="w-5 h-5 text-green-600" />}
             </div>
-            <div className="text-sm text-gray-700 mb-1">{t?.wave1Time || '6:30 → 7:00-12:00'}</div>
+            <div className="text-sm text-gray-700 mb-1">{formatWaveTime(getWaveConfigForDate(selectedDate).wave1)}</div>
             {plans[1] && <div className="text-xs text-gray-600 mb-2">{t?.planInfo?.replace('{count}', getTotalPlanned(1)) || `Načrt: ${getTotalPlanned(1)} kos`}</div>}
             {!plans[1] && <div className="text-xs text-gray-500 mb-2 italic">{t?.clickToGenerate || 'Klikni za generiranje vseh valov'}</div>}
             <button onClick={() => generatePlan(1)} disabled={isGenerating}
@@ -1590,7 +1657,7 @@ const BakeryPlanningSystem = () => {
               <span className="font-bold text-lg">{t?.wave2 || 'Val 2'}</span>
               {plans[2] && <CheckCircle className="w-5 h-5 text-green-600" />}
             </div>
-            <div className="text-sm text-gray-700 mb-1">{t?.wave2Time || '11:30 → 12:00-16:00'}</div>
+            <div className="text-sm text-gray-700 mb-1">{formatWaveTime(getWaveConfigForDate(selectedDate).wave2)}</div>
             {plans[2] && <div className="text-xs text-gray-600 mb-2">{t?.planInfo?.replace('{count}', getTotalPlanned(2)) || `Načrt: ${getTotalPlanned(2)} kos`}</div>}
             {!plans[2] && <div className="text-xs text-gray-500 mb-2 italic">{t?.generatedWith || 'Generirano z Valom 1'}</div>}
             <button onClick={() => generatePlan(2)} disabled={isGenerating || !plans[1]}
@@ -1607,7 +1674,7 @@ const BakeryPlanningSystem = () => {
               <span className="font-bold text-lg">{t?.wave3 || 'Val 3'}</span>
               {plans[3] && <CheckCircle className="w-5 h-5 text-green-600" />}
             </div>
-            <div className="text-sm text-gray-700 mb-1">{t?.wave3Time || '15:30 → 16:00-20:00'}</div>
+            <div className="text-sm text-gray-700 mb-1">{formatWaveTime(getWaveConfigForDate(selectedDate).wave3)}</div>
             {plans[3] && <div className="text-xs text-gray-600 mb-2">{t?.planInfo?.replace('{count}', getTotalPlanned(3)) || `Načrt: ${getTotalPlanned(3)} kos`}</div>}
             {!plans[3] && <div className="text-xs text-gray-500 mb-2 italic">{t?.generatedWith || 'Generirano z Valom 1'}</div>}
             <button onClick={() => generatePlan(3)} disabled={isGenerating || !plans[1]}
@@ -1720,11 +1787,11 @@ const BakeryPlanningSystem = () => {
               <thead>
                 <tr className="border-b-2 border-gray-300">
                   <th className="px-3 py-2 text-left font-bold text-gray-700 sticky left-0 bg-white">{t.product}</th>
-                  <th className="px-2 py-2 text-right font-bold text-green-700">{t.wave} 1<br/><span className="text-xs font-normal">7-12</span></th>
+                  <th className="px-2 py-2 text-right font-bold text-green-700">{t.wave} 1<br/><span className="text-xs font-normal">{formatWaveHours(getWaveConfigForDate(selectedDate).wave1)}</span></th>
                   {showBuffers && <th className="px-2 py-2 text-right font-bold text-green-600">Buf 1<br/><span className="text-xs font-normal">%</span></th>}
-                  <th className="px-2 py-2 text-right font-bold text-blue-700">{t.wave} 2<br/><span className="text-xs font-normal">12-16</span></th>
+                  <th className="px-2 py-2 text-right font-bold text-blue-700">{t.wave} 2<br/><span className="text-xs font-normal">{formatWaveHours(getWaveConfigForDate(selectedDate).wave2)}</span></th>
                   {showBuffers && <th className="px-2 py-2 text-right font-bold text-blue-600">Buf 2<br/><span className="text-xs font-normal">%</span></th>}
-                  <th className="px-2 py-2 text-right font-bold text-orange-700">{t.wave} 3<br/><span className="text-xs font-normal">16-20</span></th>
+                  <th className="px-2 py-2 text-right font-bold text-orange-700">{t.wave} 3<br/><span className="text-xs font-normal">{formatWaveHours(getWaveConfigForDate(selectedDate).wave3)}</span></th>
                   {showBuffers && <th className="px-2 py-2 text-right font-bold text-orange-600">Buf 3<br/><span className="text-xs font-normal">%</span></th>}
                   <th className="px-2 py-2 text-right font-bold text-gray-700">{t.daily}<br/><span className="text-xs font-normal">{t.total}</span></th>
                   <th className="px-2 py-2 text-right font-bold text-gray-600">{t.historical}</th>
@@ -1859,7 +1926,7 @@ const BakeryPlanningSystem = () => {
               <div className="space-y-4 print:space-y-0">
                 <div className="bg-green-50 border-2 border-green-300 rounded-lg print:bg-white print:border-0 print:p-0" data-wave-container="1">
                   <div className="flex items-center justify-between p-4 print:hidden cursor-pointer hover:bg-green-100 transition-colors" onClick={() => toggleWave(1)}>
-                    <h3 className="text-lg font-bold text-green-800">{t.wave || 'Wave'} 1 (7-12)</h3>
+                    <h3 className="text-lg font-bold text-green-800">{t.wave || 'Wave'} 1 ({formatWaveHours(getWaveConfigForDate(selectedDate).wave1)})</h3>
                     {expandedWaves[1] ? <ChevronUp className="w-6 h-6 text-green-800" /> : <ChevronDown className="w-6 h-6 text-green-800" />}
                   </div>
                   <div className={expandedWaves[1] ? "px-4 pb-4 print:block print:p-0" : "hidden print:block print:p-0"}>
@@ -1874,7 +1941,7 @@ const BakeryPlanningSystem = () => {
 
                 <div className="bg-blue-50 border-2 border-blue-300 rounded-lg print:bg-white print:border-0 print:p-0" data-wave-container="2">
                   <div className="flex items-center justify-between p-4 print:hidden cursor-pointer hover:bg-blue-100 transition-colors" onClick={() => toggleWave(2)}>
-                    <h3 className="text-lg font-bold text-blue-800">{t.wave || 'Wave'} 2 (12-16)</h3>
+                    <h3 className="text-lg font-bold text-blue-800">{t.wave || 'Wave'} 2 ({formatWaveHours(getWaveConfigForDate(selectedDate).wave2)})</h3>
                     {expandedWaves[2] ? <ChevronUp className="w-6 h-6 text-blue-800" /> : <ChevronDown className="w-6 h-6 text-blue-800" />}
                   </div>
                   <div className={expandedWaves[2] ? "px-4 pb-4 print:block print:p-0" : "hidden print:block print:p-0"}>
@@ -1889,7 +1956,7 @@ const BakeryPlanningSystem = () => {
 
                 <div className="bg-orange-50 border-2 border-orange-300 rounded-lg print:bg-white print:border-0 print:p-0" data-wave-container="3">
                   <div className="flex items-center justify-between p-4 print:hidden cursor-pointer hover:bg-orange-100 transition-colors" onClick={() => toggleWave(3)}>
-                    <h3 className="text-lg font-bold text-orange-800">{t.wave || 'Wave'} 3 (16-20)</h3>
+                    <h3 className="text-lg font-bold text-orange-800">{t.wave || 'Wave'} 3 ({formatWaveHours(getWaveConfigForDate(selectedDate).wave3)})</h3>
                     {expandedWaves[3] ? <ChevronUp className="w-6 h-6 text-orange-800" /> : <ChevronDown className="w-6 h-6 text-orange-800" />}
                   </div>
                   <div className={expandedWaves[3] ? "px-4 pb-4 print:block print:p-0" : "hidden print:block print:p-0"}>
@@ -2020,6 +2087,12 @@ const BakeryPlanningSystem = () => {
 
             setProducts(updatedProducts);
             console.log(`✅ Updated ${updatedProducts.filter(p => configNameMap[p.sku]).length} product names from config`);
+          }
+
+          // ✅ Save wave configuration to state
+          if (config.waveConfig && Object.keys(config.waveConfig).length > 0) {
+            setWaveConfig(config.waveConfig);
+            console.log('✅ Wave configuration updated:', config.waveConfig);
           }
 
           setShowOvenConfig(false);
