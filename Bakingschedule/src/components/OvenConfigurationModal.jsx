@@ -146,8 +146,8 @@ const OvenConfigurationModal = ({
           }
         }
 
-        // Parse product data (skip first 4 rows: store name, empty, section headers, column headers)
-        if (i >= 4) {
+        // Parse product data (skip first 2 rows: title and column headers)
+        if (i >= 2) {
           const eanCode = String(row[0] || '').trim();
           const name = String(row[1] || '').trim();
           const program = parseInt(row[2]);
