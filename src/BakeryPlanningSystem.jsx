@@ -298,22 +298,18 @@ const BakeryPlanningSystem = () => {
       status.waste = true;
     }
     
-    setSalesData2025(sales2025Local);
-    setSalesData2024(sales2024Local);
-    setWasteData(wasteLocal);
-    setFileStatus(status);
-    
+    // ✅ FIX 1.2: Build product list FIRST to identify packaged products
     const allSales = [...sales2025Local, ...sales2024Local];
     const uniqueProducts = [];
     const seen = new Set();
-    
+
     allSales.forEach(s => {
       if (!seen.has(s.eanCode)) {
         seen.add(s.eanCode);
-        
-        // 🔥 Automatyczne rozpoznawanie pakowania (np. 5x60, 3x80)
+
+        // Automatyczne rozpoznawanie pakowania (np. PAK 5x60, PAK. 3/1)
         const packagingInfo = parsePackagingInfo(s.productName);
-        
+
         uniqueProducts.push({
           sku: s.eanCode,
           name: s.productName,
@@ -325,7 +321,68 @@ const BakeryPlanningSystem = () => {
         });
       }
     });
-    
+
+    // ✅ FIX 1.2: Create SKU-to-packaging map for quick lookup
+    const packagingMap = {};
+    uniqueProducts.forEach(p => {
+      packagingMap[p.sku] = {
+        isPackaged: p.isPackaged,
+        packageQuantity: p.packageQuantity
+      };
+    });
+
+    // ✅ FIX 1.2: Normalize sales data - convert packaged products from units to packages
+    sales2025Local = sales2025Local.map(sale => {
+      const packaging = packagingMap[sale.eanCode];
+      if (packaging && packaging.isPackaged && packaging.packageQuantity > 1) {
+        // Convert units to packages (e.g., 15 units ÷ 5 units/package = 3 packages)
+        return {
+          ...sale,
+          rawQuantity: sale.quantity,  // Keep original for reference
+          quantity: sale.quantity / packaging.packageQuantity,
+          isNormalized: true,
+          packageQuantity: packaging.packageQuantity
+        };
+      }
+      return { ...sale, isNormalized: false };
+    });
+
+    // ✅ FIX 1.2: Normalize 2024 data
+    sales2024Local = sales2024Local.map(sale => {
+      const packaging = packagingMap[sale.eanCode];
+      if (packaging && packaging.isPackaged && packaging.packageQuantity > 1) {
+        return {
+          ...sale,
+          rawQuantity: sale.quantity,
+          quantity: sale.quantity / packaging.packageQuantity,
+          isNormalized: true,
+          packageQuantity: packaging.packageQuantity
+        };
+      }
+      return { ...sale, isNormalized: false };
+    });
+
+    // ✅ FIX 1.2: Normalize waste data
+    wasteLocal = wasteLocal.map(waste => {
+      const packaging = packagingMap[waste.eanCode];
+      if (packaging && packaging.isPackaged && packaging.packageQuantity > 1) {
+        return {
+          ...waste,
+          rawWasteQuantity: waste.wasteQuantity,
+          wasteQuantity: waste.wasteQuantity / packaging.packageQuantity,
+          isNormalized: true,
+          packageQuantity: packaging.packageQuantity
+        };
+      }
+      return { ...waste, isNormalized: false };
+    });
+
+    console.log(`✅ Data normalized: ${sales2025Local.filter(s => s.isNormalized).length} packaged sales records converted to package units`);
+
+    setSalesData2025(sales2025Local);
+    setSalesData2024(sales2024Local);
+    setWasteData(wasteLocal);
+    setFileStatus(status);
     setProducts(uniqueProducts);
 
     // ✨ NOWA FUNKCJONALNOŚĆ: Wykryj TOP 5 i stockouts
@@ -513,19 +570,20 @@ const BakeryPlanningSystem = () => {
     const productSales2025 = salesData2025.filter(s => s.eanCode === sku);
     const productSales2024 = salesData2024.filter(s => s.eanCode === sku);
 
-    // ✨ UŻYJ ML WEIGHTS zamiast hardcoded
+    // ✅ USE ML WEIGHTS - learned from corrections and stockouts
     const mlWeights = getMLWeights(sku);
 
     let weights = [];
     const isHighSales = isHighSalesDay(targetDate);
-    
+
+    // For special days (holidays, pension days), use historical pattern from similar days
     if (isHighSales) {
       const isPreHol = isPreHoliday(targetDate);
       const isPension = isPensionPaymentDay(targetDate);
-      
+
       let similarDays2025 = [];
       let similarDays2024 = [];
-      
+
       if (isPreHol) {
         const allPreHolidayDays = [];
         for (let i = -365; i < 0; i++) {
@@ -534,8 +592,8 @@ const BakeryPlanningSystem = () => {
           const dateStr = checkDate.toISOString().split('T')[0];
           if (isPreHoliday(dateStr)) allPreHolidayDays.push(dateStr);
         }
-        
-        similarDays2025 = productSales2025.filter(s => 
+
+        similarDays2025 = productSales2025.filter(s =>
           allPreHolidayDays.includes(s.dateStr) && waveHours.includes(s.hour)
         );
         similarDays2024 = productSales2024.filter(s => allPreHolidayDays.includes(s.dateStr));
@@ -549,15 +607,14 @@ const BakeryPlanningSystem = () => {
             if (isPensionPaymentDay(dateStr)) allPensionDays.push(dateStr);
           }
         }
-        
-        similarDays2025 = productSales2025.filter(s => 
+
+        similarDays2025 = productSales2025.filter(s =>
           allPensionDays.includes(s.dateStr) && waveHours.includes(s.hour)
         );
         similarDays2024 = productSales2024.filter(s => allPensionDays.includes(s.dateStr));
       }
-      
+
       if (similarDays2025.length > 0) {
-        // 🔥 POPRAWKA: Dziel przez liczbę podobnych dni które wystąpiły
         const totalQuantity = _.sumBy(similarDays2025, 'quantity');
         const uniqueDates = [...new Set(similarDays2025.map(s => s.dateStr))];
         const avgPerDay = totalQuantity / Math.max(1, uniqueDates.length);
@@ -568,65 +625,139 @@ const BakeryPlanningSystem = () => {
         weights.push({ value: adjustedForWave, weight: 0.45 });
       }
     }
-    
+
+    // SOURCE 1: Same weekday 4 weeks ago - ✅ NOW USING ML WEIGHT
     if (productSales2025.length > 0) {
       const fourWeeksAgo = new Date(targetDate);
       fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-      const recentSales = productSales2025.filter(s => 
-        s.dayOfWeek === targetDayOfWeek && s.date >= fourWeeksAgo && 
+      const recentSales = productSales2025.filter(s =>
+        s.dayOfWeek === targetDayOfWeek && s.date >= fourWeeksAgo &&
         waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
       );
-      
+
       if (recentSales.length > 0) {
-        // 🔥 POPRAWNA LOGIKA: Zawsze dziel przez liczbę wystąpień tego dnia tygodnia
-        // W okresie 4 tygodni = 4 wystąpienia (np. 4 środy)
         const byDate = _.groupBy(recentSales, 'dateStr');
+        const uniqueDates = Object.keys(byDate);
         const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
         const totalQuantity = _.sumBy(dailyTotals);
-        
-        // W okresie 28 dni (4 tygodnie) każdy dzień tygodnia występuje dokładnie 4 razy
-        const targetDaysInPeriod = 4;
-        
-        const avgPerTargetDay = totalQuantity / targetDaysInPeriod;
-        weights.push({ value: avgPerTargetDay, weight: weights.length > 0 ? 0.30 : 0.35 });
+
+        // ✅ FIX 1.3: Use actual number of unique dates instead of hardcoded 4
+        const avgPerTargetDay = totalQuantity / Math.max(1, uniqueDates.length);
+
+        // ✅ FIX 1.1: USE ML WEIGHT instead of hardcoded
+        const weight = isHighSales ? 0.30 : mlWeights.same_weekday_4w;
+        weights.push({ value: avgPerTargetDay, weight: weight });
       }
     }
-    
+
+    // SOURCE 2: Same weekday 8 weeks ago - ✅ ADDED with ML WEIGHT
+    if (productSales2025.length > 0 && !isHighSales) {
+      const eightWeeksAgo = new Date(targetDate);
+      eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+      const fourWeeksAgo = new Date(targetDate);
+      fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+
+      const olderSales = productSales2025.filter(s =>
+        s.dayOfWeek === targetDayOfWeek &&
+        s.date >= eightWeeksAgo && s.date < fourWeeksAgo &&
+        waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
+      );
+
+      if (olderSales.length > 0) {
+        const byDate = _.groupBy(olderSales, 'dateStr');
+        const uniqueDates = Object.keys(byDate);
+        const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+        const totalQuantity = _.sumBy(dailyTotals);
+        const avgPerTargetDay = totalQuantity / Math.max(1, uniqueDates.length);
+
+        // ✅ USE ML WEIGHT
+        weights.push({ value: avgPerTargetDay, weight: mlWeights.same_weekday_8w });
+      }
+    }
+
+    // SOURCE 3: Last week average - ✅ ADDED with ML WEIGHT
+    if (productSales2025.length > 0 && !isHighSales) {
+      const sevenDaysAgo = new Date(targetDate);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const lastWeekSales = productSales2025.filter(s =>
+        s.date >= sevenDaysAgo && s.date < new Date(targetDate) &&
+        waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
+      );
+
+      if (lastWeekSales.length > 0) {
+        const byDate = _.groupBy(lastWeekSales, 'dateStr');
+        const uniqueDates = Object.keys(byDate);
+        const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+        const totalQuantity = _.sumBy(dailyTotals);
+        const avgPerDay = totalQuantity / Math.max(1, uniqueDates.length);
+
+        // ✅ USE ML WEIGHT
+        weights.push({ value: avgPerDay, weight: mlWeights.last_week_avg });
+      }
+    }
+
+    // SOURCE 4: Same day of month - ✅ ADDED with ML WEIGHT
+    if (productSales2025.length > 0 && !isHighSales) {
+      const targetDayOfMonth = new Date(targetDate).getDate();
+      const twoMonthsAgo = new Date(targetDate);
+      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+
+      const sameDayMonthSales = productSales2025.filter(s =>
+        s.date.getDate() === targetDayOfMonth &&
+        s.date >= twoMonthsAgo && s.date < new Date(targetDate) &&
+        waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
+      );
+
+      if (sameDayMonthSales.length > 0) {
+        const byDate = _.groupBy(sameDayMonthSales, 'dateStr');
+        const uniqueDates = Object.keys(byDate);
+        const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+        const totalQuantity = _.sumBy(dailyTotals);
+        const avgPerOccurrence = totalQuantity / Math.max(1, uniqueDates.length);
+
+        // ✅ USE ML WEIGHT
+        weights.push({ value: avgPerOccurrence, weight: mlWeights.same_day_month });
+      }
+    }
+
+    // SOURCE 5: Year-over-year - ✅ NOW USING ML WEIGHT
     if (productSales2024.length > 0) {
       const lastYear = new Date(targetDate);
       lastYear.setFullYear(lastYear.getFullYear() - 1);
       const weekBefore = new Date(lastYear); weekBefore.setDate(weekBefore.getDate() - 7);
       const weekAfter = new Date(lastYear); weekAfter.setDate(weekAfter.getDate() + 7);
-      
-      const yearAgoSales = productSales2024.filter(s => 
+
+      const yearAgoSales = productSales2024.filter(s =>
         s.date >= weekBefore && s.date <= weekAfter && s.dayOfWeek === targetDayOfWeek
       );
-      
+
       if (yearAgoSales.length > 0) {
         const avgYearAgo = _.meanBy(yearAgoSales, 'quantity');
-        weights.push({ value: avgYearAgo * (waveHours.length / 13), weight: 0.20 });
+        const adjustedForWave = avgYearAgo * (waveHours.length / 13);
+
+        // ✅ FIX 1.1: USE ML WEIGHT instead of hardcoded 0.20
+        weights.push({ value: adjustedForWave, weight: mlWeights.year_over_year });
       }
     }
-    
+
+    // FALLBACK: If we have very few sources, add general average
     if (productSales2025.length > 0 && weights.length < 2) {
       const allHourSales = productSales2025.filter(s => waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr));
       if (allHourSales.length > 0) {
-        // 🔥 POPRAWKA: Użyj rzeczywistej liczby dni w zakresie danych
-        const totalQuantity = _.sumBy(allHourSales, 'quantity');
-        const uniqueDates = [...new Set(allHourSales.map(s => s.dateStr))];
-        
-        // Oblicz zakres dat
-        const allDates = allHourSales.map(s => s.date);
-        const minDate = new Date(Math.min(...allDates));
-        const maxDate = new Date(Math.max(...allDates));
-        const daysInRange = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
-        
-        // Dziel przez dni w zakresie (nie tylko dni ze sprzedażą)
-        const avgPerDay = totalQuantity / Math.max(1, daysInRange);
-        weights.push({ value: avgPerDay, weight: 0.20 });
+        const byDate = _.groupBy(allHourSales, 'dateStr');
+        const uniqueDates = Object.keys(byDate);
+        const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+        const totalQuantity = _.sumBy(dailyTotals);
+
+        // ✅ FIX 1.3: Use unique dates count instead of daysInRange
+        const avgPerDay = totalQuantity / Math.max(1, uniqueDates.length);
+
+        // Use last_week_avg weight as fallback
+        weights.push({ value: avgPerDay, weight: mlWeights.last_week_avg || 0.20 });
       }
     }
-    
+
     if (weights.length === 0) return 0;
 
     const totalWeight = _.sumBy(weights, 'weight');
@@ -823,26 +954,30 @@ const BakeryPlanningSystem = () => {
           qty3 = 5;
           dailyRounded += diff;
         }
-        
-        // Krok 7: Zastosuj mnożnik dla produktów pakowanych
-        // Jeśli produkt jest pakowany (np. 5x60, 3x60), pomnóż przez ilość w paczce
-        const finalQty1 = product.isPackaged ? qty1 * product.packageQuantity : qty1;
-        const finalQty2 = product.isPackaged ? qty2 * product.packageQuantity : qty2;
-        const finalQty3 = product.isPackaged ? qty3 * product.packageQuantity : qty3;
-        
+
+        // ✅ FIX 1.2: Data is already normalized to packages during parsing
+        // No multiplication needed - quantities are already in correct units
+        const finalQty1 = Math.round(qty1);
+        const finalQty2 = Math.round(qty2);
+        const finalQty3 = Math.round(qty3);
+
         // Debug dla Ajdov kruh
         if (product.sku === DEBUG_SKU) {
           console.log('Is packaged?', product.isPackaged, 'Package quantity:', product.packageQuantity);
           console.log('Final quantities:', { finalQty1, finalQty2, finalQty3, sum: finalQty1+finalQty2+finalQty3 });
+          if (product.isPackaged) {
+            console.log('ℹ️ Quantities are in PACKAGES (normalized during data loading)');
+            console.log(`ℹ️ Total units: ${(finalQty1 + finalQty2 + finalQty3) * product.packageQuantity} szt`);
+          }
         }
-        
-        // Krok 8: Przygotuj opisy
+
+        // Krok 7: Przygotuj opisy
         let reason1 = buffer1Data.reason;
         let reason2 = `Opoldne: ${buffer2Data.reason}`;
-        let reason3 = isHighSalesDay(selectedDate) 
+        let reason3 = isHighSalesDay(selectedDate)
           ? (isPreHoliday(selectedDate) ? '🎄 Pred praznikom zvečer' : '💰 Pokojnine zvečer')
           : `Večerna zmanjšava: ${buffer3Data.reason}`;
-        
+
         if (isHighSalesDay(selectedDate)) {
           if (isPreHoliday(selectedDate)) {
             reason1 = '🎄 Pred praznikom (zgodovinsko)';
@@ -852,12 +987,15 @@ const BakeryPlanningSystem = () => {
             reason2 = '💰 Pokojnine opoldne';
           }
         }
-        
+
         if (product.isKey && qty3 === 5 && hist3 * (1 + buffer3) < 5) {
           reason3 = 'Minimum ključnega izdelka (5 kos)';
         }
-        
-        const packagingNote = product.isPackaged ? ` (Večpak ${product.packageQuantity}x - peka v kosih)` : '';
+
+        // ✅ FIX 1.2: Update note to reflect package units
+        const packagingNote = product.isPackaged
+          ? ` (Večpak ${product.packageQuantity}x - načrt v paketih, peka ${finalQty1 + finalQty2 + finalQty3} pak = ${(finalQty1 + finalQty2 + finalQty3) * product.packageQuantity} kos)`
+          : '';
         
         // Inicjalizuj plany dla wszystkich fal
         if (!newPlans[1]) newPlans[1] = {};
@@ -938,12 +1076,13 @@ const BakeryPlanningSystem = () => {
             adjustmentReason = 'Minimum ključnega izdelka (5 kos)';
           }
         }
-        
-        // Apply package multiplier for packaged products
-        const baseQuantity = Math.max(0, quantity);
-        const finalQuantity = product.isPackaged ? baseQuantity * product.packageQuantity : baseQuantity;
-        const packagingNote = product.isPackaged ? ` (Večpak ${product.packageQuantity}x - peka v kosih)` : '';
-        
+
+        // ✅ FIX 1.2: No multiplication - data already normalized to packages
+        const finalQuantity = Math.max(0, Math.round(quantity));
+        const packagingNote = product.isPackaged
+          ? ` (Večpak ${product.packageQuantity}x - načrt v paketih = ${finalQuantity * product.packageQuantity} kos)`
+          : '';
+
         newPlan[product.sku] = {
           quantity: finalQuantity,
           historical: Math.round(historicalAvg),
