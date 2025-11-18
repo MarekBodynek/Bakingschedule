@@ -2004,7 +2004,24 @@ const BakeryPlanningSystem = () => {
         onClose={() => setShowOvenConfig(false)}
         onSave={(config) => {
           console.log('⚙️ Oven configuration saved:', config);
-          // Configuration is already saved in modal, just close
+
+          // ✅ CRITICAL FIX: Rebuild products with config names after config is saved
+          if (config.productConfig && config.productConfig.length > 0 && products.length > 0) {
+            const configNameMap = {};
+            config.productConfig.forEach(cp => {
+              configNameMap[cp.sku] = cp.name;
+            });
+
+            // Update product names from config
+            const updatedProducts = products.map(p => ({
+              ...p,
+              name: configNameMap[p.sku] || p.name
+            }));
+
+            setProducts(updatedProducts);
+            console.log(`✅ Updated ${updatedProducts.filter(p => configNameMap[p.sku]).length} product names from config`);
+          }
+
           setShowOvenConfig(false);
         }}
         currentLanguage={currentLanguage}
