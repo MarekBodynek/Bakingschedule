@@ -1,13 +1,65 @@
 import React, { useMemo } from 'react';
-import { Clock, Package, TrendingUp } from 'lucide-react';
+import { Clock, Package, TrendingUp, AlertTriangle } from 'lucide-react';
 
 /**
  * TRAY OPTIMIZATION VIEW
  *
  * Grupuje produkty według programów wypiekania i priorytetów
  * Pokazuje optymalną kolejność produkcji na blachach
+ *
+ * ✅ IMPL 3.1: Enhanced with algorithm-specified priority calculation
+ * - sales_velocity * 100
+ * - stockout_count * 50
+ * - is_key * 1000
  */
-const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
+const TrayOptimizationView = ({ products, wavePlan, waveNumber, salesData = [], stockoutHistory = [] }) => {
+
+  /**
+   * ✅ IMPL 3.1: Calculate sales velocity for product
+   * Based on last 30 days of sales
+   */
+  const calculateSalesVelocity = (sku) => {
+    if (!salesData || salesData.length === 0) return 0;
+
+    const productSales = salesData.filter(s => s.eanCode === sku);
+    if (productSales.length === 0) return 0;
+
+    // Get last 30 days
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000);
+
+    const recentSales = productSales.filter(s => {
+      const saleDate = new Date(s.dateStr || s.date);
+      return saleDate >= thirtyDaysAgo;
+    });
+
+    if (recentSales.length === 0) return 0;
+
+    // Calculate average daily sales velocity
+    const totalQuantity = recentSales.reduce((sum, s) => sum + (s.quantity || 0), 0);
+    const uniqueDates = [...new Set(recentSales.map(s => s.dateStr || s.date))];
+    const daysWithSales = uniqueDates.length || 1;
+
+    return totalQuantity / daysWithSales;
+  };
+
+  /**
+   * ✅ IMPL 3.1: Count stockouts in last 4 weeks
+   */
+  const countRecentStockouts = (sku) => {
+    if (!stockoutHistory || stockoutHistory.length === 0) return 0;
+
+    const productStockouts = stockoutHistory.filter(s => s.sku === sku);
+
+    // Count stockouts in last 28 days
+    const now = new Date();
+    const fourWeeksAgo = new Date(now - 28 * 24 * 60 * 60 * 1000);
+
+    return productStockouts.filter(s => {
+      const stockoutDate = new Date(s.date);
+      return stockoutDate >= fourWeeksAgo;
+    }).length;
+  };
   /**
    * Grupuje produkty według baking program i sortuje po priorytecie
    */
@@ -38,11 +90,15 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
         bakingTime = 12;
       }
 
-      // Oblicz priorytet (wyższy = ważniejszy)
+      // ✅ IMPL 3.1: Algorithm-specified priority calculation
+      // priority = sales_velocity * 100 + stockout_count * 50 + is_key * 1000
+      const salesVelocity = calculateSalesVelocity(product.sku);
+      const stockoutCount = countRecentStockouts(product.sku);
+
       let priority = 0;
-      priority += product.isKey ? 1000 : 0; // Key products najpierw
-      priority += planData.quantity * 10; // Wyższe ilości = wyższy priorytet
-      priority += planData.historical * 5; // Historyczna sprzedaż
+      priority += salesVelocity * 100;           // Sales velocity weight
+      priority += stockoutCount * 50;            // Stockout history weight
+      priority += product.isKey ? 1000 : 0;      // Key products get highest priority
 
       return {
         sku: product.sku,
@@ -53,7 +109,10 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
         packageQuantity: product.packageQuantity || 1,
         bakingProgram,
         bakingTime,
-        priority
+        priority,
+        // ✅ IMPL 3.1: Include metrics for display
+        salesVelocity: Math.round(salesVelocity * 10) / 10,
+        stockoutCount
       };
     }).filter(Boolean);
 
@@ -191,8 +250,21 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber }) => {
                             {product.packageQuantity}x PAK
                           </span>
                         )}
+                        {product.stockoutCount > 0 && (
+                          <span className="px-2 py-0.5 bg-red-100 text-red-800 rounded text-xs font-bold flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3" />
+                            {product.stockoutCount}x brak
+                          </span>
+                        )}
                       </div>
-                      <div className="text-xs text-gray-500 font-mono">{product.sku}</div>
+                      <div className="text-xs text-gray-500 flex items-center gap-2">
+                        <span className="font-mono">{product.sku}</span>
+                        {product.salesVelocity > 0 && (
+                          <span className="text-green-600">
+                            ⚡ {product.salesVelocity}/dan
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0">

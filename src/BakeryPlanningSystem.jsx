@@ -59,6 +59,12 @@ const BakeryPlanningSystem = () => {
   const [activeTab, setActiveTab] = useState('plan'); // 'plan', 'trays', 'metrics'
   const [showBuffers, setShowBuffers] = useState(true); // Pokaži/skrij bufferje
 
+  // ✅ OPT 2.1: Lookup maps for O(1) access instead of O(n) filtering
+  const [salesLookupMaps, setSalesLookupMaps] = useState(null);
+
+  // ✅ OPT 2.2: Holiday cache to avoid recalculating Easter 100+ times
+  const [holidayCache, setHolidayCache] = useState({});
+
   const previousDateRef = useRef(selectedDate);
 
   const handleDateChange = (e) => {
@@ -298,22 +304,18 @@ const BakeryPlanningSystem = () => {
       status.waste = true;
     }
     
-    setSalesData2025(sales2025Local);
-    setSalesData2024(sales2024Local);
-    setWasteData(wasteLocal);
-    setFileStatus(status);
-    
+    // ✅ FIX 1.2: Build product list FIRST to identify packaged products
     const allSales = [...sales2025Local, ...sales2024Local];
     const uniqueProducts = [];
     const seen = new Set();
-    
+
     allSales.forEach(s => {
       if (!seen.has(s.eanCode)) {
         seen.add(s.eanCode);
-        
-        // 🔥 Automatyczne rozpoznawanie pakowania (np. 5x60, 3x80)
+
+        // Automatyczne rozpoznawanie pakowania (np. PAK 5x60, PAK. 3/1)
         const packagingInfo = parsePackagingInfo(s.productName);
-        
+
         uniqueProducts.push({
           sku: s.eanCode,
           name: s.productName,
@@ -325,7 +327,68 @@ const BakeryPlanningSystem = () => {
         });
       }
     });
-    
+
+    // ✅ FIX 1.2: Create SKU-to-packaging map for quick lookup
+    const packagingMap = {};
+    uniqueProducts.forEach(p => {
+      packagingMap[p.sku] = {
+        isPackaged: p.isPackaged,
+        packageQuantity: p.packageQuantity
+      };
+    });
+
+    // ✅ FIX 1.2: Normalize sales data - convert packaged products from units to packages
+    sales2025Local = sales2025Local.map(sale => {
+      const packaging = packagingMap[sale.eanCode];
+      if (packaging && packaging.isPackaged && packaging.packageQuantity > 1) {
+        // Convert units to packages (e.g., 15 units ÷ 5 units/package = 3 packages)
+        return {
+          ...sale,
+          rawQuantity: sale.quantity,  // Keep original for reference
+          quantity: sale.quantity / packaging.packageQuantity,
+          isNormalized: true,
+          packageQuantity: packaging.packageQuantity
+        };
+      }
+      return { ...sale, isNormalized: false };
+    });
+
+    // ✅ FIX 1.2: Normalize 2024 data
+    sales2024Local = sales2024Local.map(sale => {
+      const packaging = packagingMap[sale.eanCode];
+      if (packaging && packaging.isPackaged && packaging.packageQuantity > 1) {
+        return {
+          ...sale,
+          rawQuantity: sale.quantity,
+          quantity: sale.quantity / packaging.packageQuantity,
+          isNormalized: true,
+          packageQuantity: packaging.packageQuantity
+        };
+      }
+      return { ...sale, isNormalized: false };
+    });
+
+    // ✅ FIX 1.2: Normalize waste data
+    wasteLocal = wasteLocal.map(waste => {
+      const packaging = packagingMap[waste.eanCode];
+      if (packaging && packaging.isPackaged && packaging.packageQuantity > 1) {
+        return {
+          ...waste,
+          rawWasteQuantity: waste.wasteQuantity,
+          wasteQuantity: waste.wasteQuantity / packaging.packageQuantity,
+          isNormalized: true,
+          packageQuantity: packaging.packageQuantity
+        };
+      }
+      return { ...waste, isNormalized: false };
+    });
+
+    console.log(`✅ Data normalized: ${sales2025Local.filter(s => s.isNormalized).length} packaged sales records converted to package units`);
+
+    setSalesData2025(sales2025Local);
+    setSalesData2024(sales2024Local);
+    setWasteData(wasteLocal);
+    setFileStatus(status);
     setProducts(uniqueProducts);
 
     // ✨ NOWA FUNKCJONALNOŚĆ: Wykryj TOP 5 i stockouts
@@ -430,42 +493,99 @@ const BakeryPlanningSystem = () => {
     return { isPackaged: false, quantity: 1 };
   };
 
-  useEffect(() => { 
+  useEffect(() => {
     // Bezpośrednio pokazujemy ekran uploadu zamiast próbować automatycznego ładowania
-    setShowUpload(true); 
+    setShowUpload(true);
   }, []);
 
+  // ✅ OPT 2.1: Build lookup maps when sales data changes
+  useEffect(() => {
+    if (salesData2025.length > 0 || salesData2024.length > 0) {
+      console.log('📊 Building sales lookup maps for O(1) access...');
+      const startTime = performance.now();
+
+      const maps = {
+        // Group by SKU for quick product lookup
+        sales2025BySku: _.groupBy(salesData2025, 'eanCode'),
+        sales2024BySku: _.groupBy(salesData2024, 'eanCode'),
+        wasteBySku: _.groupBy(wasteData, 'eanCode'),
+
+        // Pre-grouped by SKU and day of week for even faster access
+        sales2025BySkuAndDay: {},
+        sales2024BySkuAndDay: {}
+      };
+
+      // Build day-of-week indexes (0=Sunday, 6=Saturday)
+      for (let day = 0; day <= 6; day++) {
+        const filtered2025 = salesData2025.filter(s => s.dayOfWeek === day);
+        const filtered2024 = salesData2024.filter(s => s.dayOfWeek === day);
+
+        maps.sales2025BySkuAndDay[day] = _.groupBy(filtered2025, 'eanCode');
+        maps.sales2024BySkuAndDay[day] = _.groupBy(filtered2024, 'eanCode');
+      }
+
+      setSalesLookupMaps(maps);
+      const endTime = performance.now();
+      console.log(`✅ Lookup maps built in ${(endTime - startTime).toFixed(0)}ms - ${Object.keys(maps.sales2025BySku).length} products indexed`);
+    }
+  }, [salesData2025, salesData2024, wasteData]);
+
+  // ✅ OPT 2.2: Build holiday cache when date changes
+  useEffect(() => {
+    const year = new Date(selectedDate).getFullYear();
+    const prevYear = year - 1;
+    const nextYear = year + 1;
+
+    // Only rebuild if we don't have cache for needed years
+    if (!holidayCache[year] || !holidayCache[prevYear]) {
+      console.log(`📅 Building holiday cache for ${prevYear}-${nextYear}...`);
+
+      const newCache = {
+        [prevYear]: getSlovenianHolidays(prevYear),
+        [year]: getSlovenianHolidays(year),
+        [nextYear]: getSlovenianHolidays(nextYear)
+      };
+
+      setHolidayCache(newCache);
+      console.log(`✅ Holiday cache built: ${Object.values(newCache).flat().length} holidays indexed`);
+    }
+  }, [selectedDate]);
+
   const calculateDynamicBuffer = (sku, targetDate, waveHours) => {
-    const productSales = salesData2025.filter(s => s.eanCode === sku);
+    // ✅ OPT 2.1: Use lookup map instead of filtering entire array
+    const productSales = salesLookupMaps?.sales2025BySku[sku] || [];
     if (productSales.length === 0) return { buffer: 0.15, reason: 'Ni podatkov, privzeta rezerva' };
-    
+
     if (isHighSalesDay(targetDate)) {
       return { buffer: 0, reason: 'Zgodovinski podatki vključujejo povpraševanje' };
     }
-    
+
     const fourWeeksAgo = new Date(targetDate);
     fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-    
-    const recentDays = productSales.filter(s => 
+
+    const recentDays = productSales.filter(s =>
       s.date >= fourWeeksAgo && waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
     );
-    
+
     if (recentDays.length < 10) {
       return { buffer: 0.15, reason: 'Omejeni podatki, privzeta rezerva' };
     }
     
     const byDate = _.groupBy(recentDays, 'dateStr');
-    const dailyData = Object.entries(byDate).map(([date, sales]) => ({
+    const rawDailyData = Object.entries(byDate).map(([date, sales]) => ({
       date,
       total: _.sumBy(sales, 'quantity'),
       isWeekend: new Date(date).getDay() === 0 || new Date(date).getDay() === 6
     }));
-    
+
+    // ✅ IMPL 2.1: Smooth anomalies before CV calculation
+    const dailyData = smoothAnomalies(rawDailyData, 0.30);
+
     const weekdayDays = dailyData.filter(d => !d.isWeekend);
     if (weekdayDays.length < 3) {
       return { buffer: 0.15, reason: 'Nezadostni podatki za delovne dni' };
     }
-    
+
     const weekdayAvg = _.meanBy(weekdayDays, 'total');
     const weekdayStdDev = Math.sqrt(_.meanBy(weekdayDays, d => Math.pow(d.total - weekdayAvg, 2)));
     const weekdayCV = weekdayStdDev / weekdayAvg;
@@ -508,24 +628,137 @@ const BakeryPlanningSystem = () => {
     };
   };
 
+  // ✅ IMPL 2.1: Anomaly smoothing - replace outliers >30% deviation from median
+  const smoothAnomalies = (dailyData, threshold = 0.30) => {
+    if (dailyData.length < 3) return dailyData;
+
+    // Calculate median
+    const quantities = dailyData.map(d => d.total || d.quantity).sort((a, b) => a - b);
+    const mid = Math.floor(quantities.length / 2);
+    const median = quantities.length % 2 !== 0
+      ? quantities[mid]
+      : (quantities[mid - 1] + quantities[mid]) / 2;
+
+    if (median === 0) return dailyData;
+
+    // Smooth outliers
+    let smoothedCount = 0;
+    const smoothed = dailyData.map(d => {
+      const value = d.total || d.quantity;
+      const deviation = Math.abs(value - median) / median;
+
+      if (deviation > threshold) {
+        smoothedCount++;
+        return {
+          ...d,
+          total: d.total !== undefined ? median : d.total,
+          quantity: d.quantity !== undefined ? median : d.quantity,
+          wasSmoothed: true,
+          originalValue: value
+        };
+      }
+      return { ...d, wasSmoothed: false };
+    });
+
+    if (smoothedCount > 0) {
+      console.log(`📊 Smoothed ${smoothedCount} anomalies (>${threshold * 100}% from median ${median.toFixed(1)})`);
+    }
+
+    return smoothed;
+  };
+
+  /**
+   * ✅ IMPL 3.2: Find similar products based on name patterns
+   * Used as fallback for new products without history
+   */
+  const findSimilarProducts = (currentSku, productName, allProducts) => {
+    // Extract key words from product name
+    const nameLower = productName.toLowerCase();
+    const keywords = nameLower.split(/[\s\-_,]+/).filter(word => word.length > 2);
+
+    // Define product categories based on common bakery patterns
+    const categoryPatterns = {
+      bread: ['kruh', 'kruha', 'bread', 'hljeb', 'baguette'],
+      pastry: ['croissant', 'rogljič', 'puff', 'burek', 'štrudelj'],
+      pizza: ['pizza', 'focaccia', 'lepinja'],
+      sweet: ['čokolada', 'chocolate', 'vanilija', 'jagoda', 'sladka'],
+      packaged: ['pak', 'pack', 'paket']
+    };
+
+    // Determine product category
+    let currentCategory = 'other';
+    for (const [category, patterns] of Object.entries(categoryPatterns)) {
+      if (patterns.some(pattern => nameLower.includes(pattern))) {
+        currentCategory = category;
+        break;
+      }
+    }
+
+    // Score similar products
+    const scored = allProducts
+      .filter(p => p.sku !== currentSku)
+      .map(product => {
+        const otherName = product.name.toLowerCase();
+        let score = 0;
+
+        // Same category bonus (+50)
+        for (const [category, patterns] of Object.entries(categoryPatterns)) {
+          if (patterns.some(pattern => otherName.includes(pattern))) {
+            if (category === currentCategory) {
+              score += 50;
+            }
+            break;
+          }
+        }
+
+        // Keyword matches (+10 each)
+        keywords.forEach(keyword => {
+          if (otherName.includes(keyword)) {
+            score += 10;
+          }
+        });
+
+        // Same packaging type bonus (+20)
+        const currentProduct = allProducts.find(p => p.sku === currentSku);
+        if (currentProduct && product.isPackaged === currentProduct.isPackaged) {
+          score += 20;
+        }
+
+        // Key product status match (+15)
+        if (currentProduct && product.isKey === currentProduct.isKey) {
+          score += 15;
+        }
+
+        return { ...product, similarityScore: score };
+      })
+      .filter(p => p.similarityScore > 0)
+      .sort((a, b) => b.similarityScore - a.similarityScore);
+
+    // Return top 3 similar products
+    return scored.slice(0, 3);
+  };
+
   const calculateHistoricalAverage = (sku, targetDate, waveHours) => {
     const targetDayOfWeek = new Date(targetDate).getDay();
-    const productSales2025 = salesData2025.filter(s => s.eanCode === sku);
-    const productSales2024 = salesData2024.filter(s => s.eanCode === sku);
 
-    // ✨ UŻYJ ML WEIGHTS zamiast hardcoded
+    // ✅ OPT 2.1: Use lookup maps for O(1) access instead of O(n) filtering
+    const productSales2025 = salesLookupMaps?.sales2025BySku[sku] || [];
+    const productSales2024 = salesLookupMaps?.sales2024BySku[sku] || [];
+
+    // ✅ USE ML WEIGHTS - learned from corrections and stockouts
     const mlWeights = getMLWeights(sku);
 
     let weights = [];
     const isHighSales = isHighSalesDay(targetDate);
-    
+
+    // For special days (holidays, pension days), use historical pattern from similar days
     if (isHighSales) {
       const isPreHol = isPreHoliday(targetDate);
       const isPension = isPensionPaymentDay(targetDate);
-      
+
       let similarDays2025 = [];
       let similarDays2024 = [];
-      
+
       if (isPreHol) {
         const allPreHolidayDays = [];
         for (let i = -365; i < 0; i++) {
@@ -534,8 +767,8 @@ const BakeryPlanningSystem = () => {
           const dateStr = checkDate.toISOString().split('T')[0];
           if (isPreHoliday(dateStr)) allPreHolidayDays.push(dateStr);
         }
-        
-        similarDays2025 = productSales2025.filter(s => 
+
+        similarDays2025 = productSales2025.filter(s =>
           allPreHolidayDays.includes(s.dateStr) && waveHours.includes(s.hour)
         );
         similarDays2024 = productSales2024.filter(s => allPreHolidayDays.includes(s.dateStr));
@@ -549,15 +782,14 @@ const BakeryPlanningSystem = () => {
             if (isPensionPaymentDay(dateStr)) allPensionDays.push(dateStr);
           }
         }
-        
-        similarDays2025 = productSales2025.filter(s => 
+
+        similarDays2025 = productSales2025.filter(s =>
           allPensionDays.includes(s.dateStr) && waveHours.includes(s.hour)
         );
         similarDays2024 = productSales2024.filter(s => allPensionDays.includes(s.dateStr));
       }
-      
+
       if (similarDays2025.length > 0) {
-        // 🔥 POPRAWKA: Dziel przez liczbę podobnych dni które wystąpiły
         const totalQuantity = _.sumBy(similarDays2025, 'quantity');
         const uniqueDates = [...new Set(similarDays2025.map(s => s.dateStr))];
         const avgPerDay = totalQuantity / Math.max(1, uniqueDates.length);
@@ -568,66 +800,186 @@ const BakeryPlanningSystem = () => {
         weights.push({ value: adjustedForWave, weight: 0.45 });
       }
     }
-    
+
+    // SOURCE 1: Same weekday 4 weeks ago - ✅ NOW USING ML WEIGHT
     if (productSales2025.length > 0) {
       const fourWeeksAgo = new Date(targetDate);
       fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-      const recentSales = productSales2025.filter(s => 
-        s.dayOfWeek === targetDayOfWeek && s.date >= fourWeeksAgo && 
+      const recentSales = productSales2025.filter(s =>
+        s.dayOfWeek === targetDayOfWeek && s.date >= fourWeeksAgo &&
         waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
       );
-      
+
       if (recentSales.length > 0) {
-        // 🔥 POPRAWNA LOGIKA: Zawsze dziel przez liczbę wystąpień tego dnia tygodnia
-        // W okresie 4 tygodni = 4 wystąpienia (np. 4 środy)
         const byDate = _.groupBy(recentSales, 'dateStr');
+        const uniqueDates = Object.keys(byDate);
         const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
         const totalQuantity = _.sumBy(dailyTotals);
-        
-        // W okresie 28 dni (4 tygodnie) każdy dzień tygodnia występuje dokładnie 4 razy
-        const targetDaysInPeriod = 4;
-        
-        const avgPerTargetDay = totalQuantity / targetDaysInPeriod;
-        weights.push({ value: avgPerTargetDay, weight: weights.length > 0 ? 0.30 : 0.35 });
+
+        // ✅ FIX 1.3: Use actual number of unique dates instead of hardcoded 4
+        const avgPerTargetDay = totalQuantity / Math.max(1, uniqueDates.length);
+
+        // ✅ FIX 1.1: USE ML WEIGHT instead of hardcoded
+        const weight = isHighSales ? 0.30 : mlWeights.same_weekday_4w;
+        weights.push({ value: avgPerTargetDay, weight: weight });
       }
     }
-    
+
+    // SOURCE 2: Same weekday 8 weeks ago - ✅ ADDED with ML WEIGHT
+    if (productSales2025.length > 0 && !isHighSales) {
+      const eightWeeksAgo = new Date(targetDate);
+      eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+      const fourWeeksAgo = new Date(targetDate);
+      fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+
+      const olderSales = productSales2025.filter(s =>
+        s.dayOfWeek === targetDayOfWeek &&
+        s.date >= eightWeeksAgo && s.date < fourWeeksAgo &&
+        waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
+      );
+
+      if (olderSales.length > 0) {
+        const byDate = _.groupBy(olderSales, 'dateStr');
+        const uniqueDates = Object.keys(byDate);
+        const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+        const totalQuantity = _.sumBy(dailyTotals);
+        const avgPerTargetDay = totalQuantity / Math.max(1, uniqueDates.length);
+
+        // ✅ USE ML WEIGHT
+        weights.push({ value: avgPerTargetDay, weight: mlWeights.same_weekday_8w });
+      }
+    }
+
+    // SOURCE 3: Last week average - ✅ ADDED with ML WEIGHT
+    if (productSales2025.length > 0 && !isHighSales) {
+      const sevenDaysAgo = new Date(targetDate);
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const lastWeekSales = productSales2025.filter(s =>
+        s.date >= sevenDaysAgo && s.date < new Date(targetDate) &&
+        waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
+      );
+
+      if (lastWeekSales.length > 0) {
+        const byDate = _.groupBy(lastWeekSales, 'dateStr');
+        const uniqueDates = Object.keys(byDate);
+        const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+        const totalQuantity = _.sumBy(dailyTotals);
+        const avgPerDay = totalQuantity / Math.max(1, uniqueDates.length);
+
+        // ✅ USE ML WEIGHT
+        weights.push({ value: avgPerDay, weight: mlWeights.last_week_avg });
+      }
+    }
+
+    // SOURCE 4: Same day of month - ✅ ADDED with ML WEIGHT
+    if (productSales2025.length > 0 && !isHighSales) {
+      const targetDayOfMonth = new Date(targetDate).getDate();
+      const twoMonthsAgo = new Date(targetDate);
+      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2);
+
+      const sameDayMonthSales = productSales2025.filter(s =>
+        s.date.getDate() === targetDayOfMonth &&
+        s.date >= twoMonthsAgo && s.date < new Date(targetDate) &&
+        waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
+      );
+
+      if (sameDayMonthSales.length > 0) {
+        const byDate = _.groupBy(sameDayMonthSales, 'dateStr');
+        const uniqueDates = Object.keys(byDate);
+        const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+        const totalQuantity = _.sumBy(dailyTotals);
+        const avgPerOccurrence = totalQuantity / Math.max(1, uniqueDates.length);
+
+        // ✅ USE ML WEIGHT
+        weights.push({ value: avgPerOccurrence, weight: mlWeights.same_day_month });
+      }
+    }
+
+    // SOURCE 5: Year-over-year - ✅ NOW USING ML WEIGHT
     if (productSales2024.length > 0) {
       const lastYear = new Date(targetDate);
       lastYear.setFullYear(lastYear.getFullYear() - 1);
       const weekBefore = new Date(lastYear); weekBefore.setDate(weekBefore.getDate() - 7);
       const weekAfter = new Date(lastYear); weekAfter.setDate(weekAfter.getDate() + 7);
-      
-      const yearAgoSales = productSales2024.filter(s => 
+
+      const yearAgoSales = productSales2024.filter(s =>
         s.date >= weekBefore && s.date <= weekAfter && s.dayOfWeek === targetDayOfWeek
       );
-      
+
       if (yearAgoSales.length > 0) {
         const avgYearAgo = _.meanBy(yearAgoSales, 'quantity');
-        weights.push({ value: avgYearAgo * (waveHours.length / 13), weight: 0.20 });
+        const adjustedForWave = avgYearAgo * (waveHours.length / 13);
+
+        // ✅ FIX 1.1: USE ML WEIGHT instead of hardcoded 0.20
+        weights.push({ value: adjustedForWave, weight: mlWeights.year_over_year });
       }
     }
-    
+
+    // FALLBACK: If we have very few sources, add general average
     if (productSales2025.length > 0 && weights.length < 2) {
       const allHourSales = productSales2025.filter(s => waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr));
       if (allHourSales.length > 0) {
-        // 🔥 POPRAWKA: Użyj rzeczywistej liczby dni w zakresie danych
-        const totalQuantity = _.sumBy(allHourSales, 'quantity');
-        const uniqueDates = [...new Set(allHourSales.map(s => s.dateStr))];
-        
-        // Oblicz zakres dat
-        const allDates = allHourSales.map(s => s.date);
-        const minDate = new Date(Math.min(...allDates));
-        const maxDate = new Date(Math.max(...allDates));
-        const daysInRange = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
-        
-        // Dziel przez dni w zakresie (nie tylko dni ze sprzedażą)
-        const avgPerDay = totalQuantity / Math.max(1, daysInRange);
-        weights.push({ value: avgPerDay, weight: 0.20 });
+        const byDate = _.groupBy(allHourSales, 'dateStr');
+        const uniqueDates = Object.keys(byDate);
+        const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+        const totalQuantity = _.sumBy(dailyTotals);
+
+        // ✅ FIX 1.3: Use unique dates count instead of daysInRange
+        const avgPerDay = totalQuantity / Math.max(1, uniqueDates.length);
+
+        // Use last_week_avg weight as fallback
+        weights.push({ value: avgPerDay, weight: mlWeights.last_week_avg || 0.20 });
       }
     }
-    
-    if (weights.length === 0) return 0;
+
+    // ✅ IMPL 3.2: New product handling - use similar product fallback
+    if (weights.length === 0) {
+      // Find product info to get category
+      const currentProduct = products.find(p => p.sku === sku);
+      if (currentProduct) {
+        console.log(`🆕 New product detected: ${currentProduct.name} (${sku}) - searching for similar products...`);
+
+        // Find similar products in the same category based on name patterns
+        const similarProducts = findSimilarProducts(sku, currentProduct.name, products);
+
+        if (similarProducts.length > 0) {
+          // Use the most similar product's data as fallback
+          const bestMatch = similarProducts[0];
+          const bestMatchSales2025 = salesLookupMaps?.sales2025BySku[bestMatch.sku] || [];
+
+          if (bestMatchSales2025.length > 0) {
+            // Calculate average for similar product
+            const fourWeeksAgo = new Date(targetDate);
+            fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+            const recentSales = bestMatchSales2025.filter(s =>
+              s.dayOfWeek === targetDayOfWeek && s.date >= fourWeeksAgo &&
+              waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
+            );
+
+            if (recentSales.length > 0) {
+              const byDate = _.groupBy(recentSales, 'dateStr');
+              const uniqueDates = Object.keys(byDate);
+              const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+              const totalQuantity = _.sumBy(dailyTotals);
+              const avgPerDay = totalQuantity / Math.max(1, uniqueDates.length);
+
+              // Apply conservative factor for new products (80%)
+              const conservativeForecast = avgPerDay * 0.8;
+              console.log(`✅ Using similar product "${bestMatch.name}" as fallback: ${avgPerDay.toFixed(1)} × 0.8 = ${conservativeForecast.toFixed(1)}`);
+
+              return conservativeForecast;
+            }
+          }
+        }
+
+        // Ultimate fallback: minimum quantity for new products
+        console.log(`⚠️ No similar product found for ${currentProduct.name} - using minimum quantity`);
+        return currentProduct.isKey ? 5 : 2;
+      }
+
+      return 0;
+    }
 
     const totalWeight = _.sumBy(weights, 'weight');
     const weightedSum = _.sumBy(weights, w => w.value * w.weight);
@@ -823,26 +1175,30 @@ const BakeryPlanningSystem = () => {
           qty3 = 5;
           dailyRounded += diff;
         }
-        
-        // Krok 7: Zastosuj mnożnik dla produktów pakowanych
-        // Jeśli produkt jest pakowany (np. 5x60, 3x60), pomnóż przez ilość w paczce
-        const finalQty1 = product.isPackaged ? qty1 * product.packageQuantity : qty1;
-        const finalQty2 = product.isPackaged ? qty2 * product.packageQuantity : qty2;
-        const finalQty3 = product.isPackaged ? qty3 * product.packageQuantity : qty3;
-        
+
+        // ✅ FIX 1.2: Data is already normalized to packages during parsing
+        // No multiplication needed - quantities are already in correct units
+        const finalQty1 = Math.round(qty1);
+        const finalQty2 = Math.round(qty2);
+        const finalQty3 = Math.round(qty3);
+
         // Debug dla Ajdov kruh
         if (product.sku === DEBUG_SKU) {
           console.log('Is packaged?', product.isPackaged, 'Package quantity:', product.packageQuantity);
           console.log('Final quantities:', { finalQty1, finalQty2, finalQty3, sum: finalQty1+finalQty2+finalQty3 });
+          if (product.isPackaged) {
+            console.log('ℹ️ Quantities are in PACKAGES (normalized during data loading)');
+            console.log(`ℹ️ Total units: ${(finalQty1 + finalQty2 + finalQty3) * product.packageQuantity} szt`);
+          }
         }
-        
-        // Krok 8: Przygotuj opisy
+
+        // Krok 7: Przygotuj opisy
         let reason1 = buffer1Data.reason;
         let reason2 = `Opoldne: ${buffer2Data.reason}`;
-        let reason3 = isHighSalesDay(selectedDate) 
+        let reason3 = isHighSalesDay(selectedDate)
           ? (isPreHoliday(selectedDate) ? '🎄 Pred praznikom zvečer' : '💰 Pokojnine zvečer')
           : `Večerna zmanjšava: ${buffer3Data.reason}`;
-        
+
         if (isHighSalesDay(selectedDate)) {
           if (isPreHoliday(selectedDate)) {
             reason1 = '🎄 Pred praznikom (zgodovinsko)';
@@ -852,12 +1208,15 @@ const BakeryPlanningSystem = () => {
             reason2 = '💰 Pokojnine opoldne';
           }
         }
-        
+
         if (product.isKey && qty3 === 5 && hist3 * (1 + buffer3) < 5) {
           reason3 = 'Minimum ključnega izdelka (5 kos)';
         }
-        
-        const packagingNote = product.isPackaged ? ` (Večpak ${product.packageQuantity}x - peka v kosih)` : '';
+
+        // ✅ FIX 1.2: Update note to reflect package units
+        const packagingNote = product.isPackaged
+          ? ` (Večpak ${product.packageQuantity}x - načrt v paketih, peka ${finalQty1 + finalQty2 + finalQty3} pak = ${(finalQty1 + finalQty2 + finalQty3) * product.packageQuantity} kos)`
+          : '';
         
         // Inicjalizuj plany dla wszystkich fal
         if (!newPlans[1]) newPlans[1] = {};
@@ -938,12 +1297,13 @@ const BakeryPlanningSystem = () => {
             adjustmentReason = 'Minimum ključnega izdelka (5 kos)';
           }
         }
-        
-        // Apply package multiplier for packaged products
-        const baseQuantity = Math.max(0, quantity);
-        const finalQuantity = product.isPackaged ? baseQuantity * product.packageQuantity : baseQuantity;
-        const packagingNote = product.isPackaged ? ` (Večpak ${product.packageQuantity}x - peka v kosih)` : '';
-        
+
+        // ✅ FIX 1.2: No multiplication - data already normalized to packages
+        const finalQuantity = Math.max(0, Math.round(quantity));
+        const packagingNote = product.isPackaged
+          ? ` (Večpak ${product.packageQuantity}x - načrt v paketih = ${finalQuantity * product.packageQuantity} kos)`
+          : '';
+
         newPlan[product.sku] = {
           quantity: finalQuantity,
           historical: Math.round(historicalAvg),
@@ -963,6 +1323,184 @@ const BakeryPlanningSystem = () => {
     // ✨ ZAPISZ PLAN DO LOCALSTORAGE
     savePlan(selectedDate, newPlans);
     console.log(`💾 Plan saved for ${selectedDate}`);
+  };
+
+  // ✅ IMPL 2.2: Real-time Wave 2 generation with morning performance adaptation
+  const generateWave2RealTime = async (actualMorningSales) => {
+    if (!plans[1]) {
+      console.error('❌ Wave 1 must be generated first!');
+      return;
+    }
+
+    console.log('📊 Generating Wave 2 with real-time adaptation...');
+    setIsGenerating(true);
+
+    const newPlan = {};
+    const waveHours = { 2: [12, 13, 14, 15] };
+
+    for (const product of products) {
+      const sku = product.sku;
+      const wave1Plan = plans[1][sku];
+
+      if (!wave1Plan) continue;
+
+      // Get actual sales for this product (7:00-12:00)
+      const actualSales = actualMorningSales?.[sku] || 0;
+      const wave1Forecast = wave1Plan.quantity;
+
+      // Calculate deviation from forecast
+      const deviation = wave1Forecast > 0 ? (actualSales / wave1Forecast) - 1 : 0;
+
+      // Detect potential stockout (sold all or very close)
+      const stockoutDetected = actualSales >= wave1Forecast * 0.95;
+
+      // Calculate adjustment factor based on deviation
+      let adjustmentFactor = 1.0;
+      let reason = '';
+
+      if (deviation > 0.20) {
+        // Sales 20%+ higher than forecast
+        if (stockoutDetected) {
+          adjustmentFactor = 1.35; // +35% aggressive
+          reason = '🚨 Stockout v Wave 1 - agresivno povečanje';
+        } else {
+          adjustmentFactor = 1.15; // +15% cautious
+          reason = '📈 Prodaja nad napovedjo - previdno povečanje';
+        }
+      } else if (deviation >= -0.20 && deviation <= 0.20) {
+        adjustmentFactor = 1.0;
+        reason = '✅ Prodaja skladno z napovedjo';
+      } else {
+        // Sales 20%+ lower
+        adjustmentFactor = 0.85; // -15%
+        reason = '📉 Prodaja pod napovedjo - zmanjšanje';
+      }
+
+      // Get base afternoon forecast
+      const baseAfternoon = calculateHistoricalAverage(sku, selectedDate, waveHours[2]);
+
+      // Apply adjustment
+      const adjustedForecast = baseAfternoon * adjustmentFactor;
+
+      // Apply medium buffer
+      const bufferPercent = stockoutDetected ? 0.15 : 0.10;
+      const finalQuantity = Math.max(0, Math.round(adjustedForecast * (1 + bufferPercent)));
+
+      newPlan[sku] = {
+        quantity: finalQuantity,
+        historical: Math.round(baseAfternoon),
+        buffer: Math.round(bufferPercent * 100),
+        adjustmentFactor: adjustmentFactor,
+        adjustmentReason: reason,
+        wave1Performance: {
+          planned: wave1Forecast,
+          actual: actualSales,
+          deviation: `${(deviation * 100).toFixed(0)}%`,
+          stockout: stockoutDetected
+        },
+        isPackaged: product.isPackaged
+      };
+
+      // Log stockout for ML learning
+      if (stockoutDetected) {
+        console.log(`🚨 Stockout detected for ${product.name} in Wave 1`);
+      }
+    }
+
+    // Update plans
+    const updatedPlans = { ...plans, 2: newPlan };
+    setPlans(updatedPlans);
+    savePlan(selectedDate, updatedPlans);
+
+    setIsGenerating(false);
+    console.log('✅ Wave 2 generated with real-time adaptation');
+  };
+
+  // ✅ IMPL 2.3: Real-time Wave 3 generation with full day performance adaptation
+  const generateWave3RealTime = async (actualDaySales) => {
+    if (!plans[1] || !plans[2]) {
+      console.error('❌ Waves 1 and 2 must be generated first!');
+      return;
+    }
+
+    console.log('📊 Generating Wave 3 with real-time adaptation...');
+    setIsGenerating(true);
+
+    const newPlan = {};
+    const waveHours = { 3: [16, 17, 18, 19] };
+
+    for (const product of products) {
+      const sku = product.sku;
+      const wave1Plan = plans[1][sku];
+      const wave2Plan = plans[2][sku];
+
+      if (!wave1Plan || !wave2Plan) continue;
+
+      // Get actual sales (7:00-16:00)
+      const actualSales = actualDaySales?.[sku] || 0;
+      const totalForecast = wave1Plan.quantity + wave2Plan.quantity;
+
+      // Calculate sales rate ratio
+      const salesRateRatio = totalForecast > 0 ? actualSales / totalForecast : 0;
+
+      // Base evening forecast
+      const baseEvening = calculateHistoricalAverage(sku, selectedDate, waveHours[3]);
+
+      let adjustmentFactor = 1.0;
+      let buffer = -0.10; // Default conservative for evening
+      let reason = '';
+
+      if (salesRateRatio < 0.5) {
+        // Very slow day - ultra conservative
+        adjustmentFactor = 0.5;
+        buffer = -0.20;
+        reason = '📉 Zelo počasen dan - minimalna peka';
+      } else if (salesRateRatio < 0.8) {
+        // Slower than expected
+        adjustmentFactor = 0.7;
+        buffer = -0.15;
+        reason = '📉 Počasnejši dan - zmanjšana peka';
+      } else if (salesRateRatio > 1.2) {
+        // Much higher than expected
+        adjustmentFactor = 1.3;
+        buffer = 0.05;
+        reason = '📈 Izjemno dober dan - povečana peka';
+      } else {
+        // On track
+        reason = '✅ Dan po načrtu - standardna peka';
+      }
+
+      const adjustedForecast = baseEvening * adjustmentFactor;
+      let finalQuantity = Math.max(0, Math.round(adjustedForecast * (1 + buffer)));
+
+      // Minimum for key products
+      if (product.isKey && finalQuantity < 5) {
+        finalQuantity = 5;
+        reason = 'Minimum ključnega izdelka (5 kos)';
+      }
+
+      newPlan[sku] = {
+        quantity: finalQuantity,
+        historical: Math.round(baseEvening),
+        buffer: Math.round(buffer * 100),
+        adjustmentFactor: adjustmentFactor,
+        adjustmentReason: reason,
+        dayPerformance: {
+          planned: totalForecast,
+          actual: actualSales,
+          ratio: `${(salesRateRatio * 100).toFixed(0)}%`
+        },
+        isPackaged: product.isPackaged
+      };
+    }
+
+    // Update plans
+    const updatedPlans = { ...plans, 3: newPlan };
+    setPlans(updatedPlans);
+    savePlan(selectedDate, updatedPlans);
+
+    setIsGenerating(false);
+    console.log('✅ Wave 3 generated with real-time adaptation');
   };
 
   const getTotalPlanned = (wave) => plans[wave] ? Object.values(plans[wave]).reduce((sum, p) => sum + p.quantity, 0) : 0;
@@ -1300,6 +1838,26 @@ const BakeryPlanningSystem = () => {
               }`}>
               {!plans[1] ? '⏸ Čakanje' : 'Ponovno generiraj Val 2'}
             </button>
+            {/* ✅ IMPL 3.3: Real-time Wave 2 button */}
+            {plans[1] && (
+              <button
+                onClick={() => {
+                  const actualSales = prompt('Vnesi dejansko prodajo do 12:30 (JSON format ali skupna številka):');
+                  if (actualSales) {
+                    try {
+                      const parsed = isNaN(actualSales) ? JSON.parse(actualSales) : { total: parseInt(actualSales) };
+                      generateWave2RealTime(parsed);
+                    } catch (e) {
+                      alert('Napaka: ' + e.message);
+                    }
+                  }
+                }}
+                disabled={isGenerating}
+                className="w-full mt-2 py-1 rounded text-sm font-semibold bg-blue-100 hover:bg-blue-200 text-blue-700 transition-colors"
+              >
+                ⚡ Real-time adaptacija
+              </button>
+            )}
           </div>
 
           <div className={`p-4 rounded-lg border-2 ${plans[3] ? 'bg-orange-50 border-orange-300 shadow-md' : 'bg-gray-50 border-gray-200'}`}>
@@ -1317,6 +1875,26 @@ const BakeryPlanningSystem = () => {
               }`}>
               {!plans[1] ? '⏸ Čakanje' : 'Ponovno generiraj Val 3'}
             </button>
+            {/* ✅ IMPL 3.3: Real-time Wave 3 button */}
+            {plans[1] && plans[2] && (
+              <button
+                onClick={() => {
+                  const actualSales = prompt('Vnesi dejansko prodajo do 16:00 (JSON format ali skupna številka):');
+                  if (actualSales) {
+                    try {
+                      const parsed = isNaN(actualSales) ? JSON.parse(actualSales) : { total: parseInt(actualSales) };
+                      generateWave3RealTime(parsed);
+                    } catch (e) {
+                      alert('Napaka: ' + e.message);
+                    }
+                  }
+                }}
+                disabled={isGenerating}
+                className="w-full mt-2 py-1 rounded text-sm font-semibold bg-orange-100 hover:bg-orange-200 text-orange-700 transition-colors"
+              >
+                ⚡ Real-time adaptacija
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -1547,6 +2125,8 @@ const BakeryPlanningSystem = () => {
                     products={products}
                     wavePlan={plans[1]}
                     waveNumber={1}
+                    salesData={salesData2025}
+                    stockoutHistory={detectedStockouts}
                   />
                 </div>
 
@@ -1556,6 +2136,8 @@ const BakeryPlanningSystem = () => {
                     products={products}
                     wavePlan={plans[2]}
                     waveNumber={2}
+                    salesData={salesData2025}
+                    stockoutHistory={detectedStockouts}
                   />
                 </div>
 
@@ -1565,6 +2147,8 @@ const BakeryPlanningSystem = () => {
                     products={products}
                     wavePlan={plans[3]}
                     waveNumber={3}
+                    salesData={salesData2025}
+                    stockoutHistory={detectedStockouts}
                   />
                 </div>
               </div>
