@@ -23,7 +23,8 @@ import {
   importAllData,
   clearAllData,
   clearGeneratedPlans,
-  getOvenConfiguration
+  getOvenConfiguration,
+  getProgramConfiguration
 } from './utils/localStorage';
 
 import {
@@ -752,6 +753,15 @@ const BakeryPlanningSystem = () => {
   useEffect(() => {
     // Bezpośrednio pokazujemy ekran uploadu zamiast próbować automatycznego ładowania
     setShowUpload(true);
+  }, []);
+
+  // ✨ Ładowanie waveConfig z localStorage przy starcie
+  useEffect(() => {
+    const savedConfig = getProgramConfiguration();
+    if (savedConfig && savedConfig.waveConfig && Object.keys(savedConfig.waveConfig).length > 0) {
+      setWaveConfig(savedConfig.waveConfig);
+      console.log('📅 Loaded wave configuration from localStorage:', savedConfig.waveConfig);
+    }
   }, []);
 
   // ✨ Ładowanie zapisanych planów dla wybranej daty
