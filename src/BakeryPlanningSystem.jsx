@@ -309,16 +309,27 @@ const BakeryPlanningSystem = () => {
     const uniqueProducts = [];
     const seen = new Set();
 
+    // ✅ CRITICAL FIX: Load config products to get correct names
+    const configProducts = getOvenConfiguration();
+    const configNameMap = {};
+    configProducts.forEach(cp => {
+      configNameMap[cp.sku] = cp.name;
+    });
+    console.log(`📋 Loaded ${configProducts.length} products from config file for name mapping`);
+
     allSales.forEach(s => {
       if (!seen.has(s.eanCode)) {
         seen.add(s.eanCode);
 
+        // ✅ CRITICAL FIX: Use name from CONFIG FILE, not sales file!
+        const productName = configNameMap[s.eanCode] || s.productName;
+
         // Automatyczne rozpoznawanie pakowania (np. PAK 5x60, PAK. 3/1)
-        const packagingInfo = parsePackagingInfo(s.productName);
+        const packagingInfo = parsePackagingInfo(productName);
 
         uniqueProducts.push({
           sku: s.eanCode,
-          name: s.productName,
+          name: productName,
           isKey: ['3831002150359', '3831002150205'].includes(s.eanCode),
           isPackaged: packagingInfo.isPackaged,
           packageQuantity: packagingInfo.quantity,
