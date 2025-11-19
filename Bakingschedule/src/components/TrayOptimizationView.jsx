@@ -81,7 +81,7 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
       productsByProgram[product.bakingProgram].push(product);
     });
 
-    // 4. NOWA LOGIKA: Najpierw zapas na otwarcie, potem kluczowe, potem reszta
+    // 4. NOWA LOGIKA: Otwarcie → Pierwsza godzina → Kluczowe → Reszta
     const allTrays = [];
     let trayId = 1;
     const traysByProgram = {};
@@ -90,10 +90,11 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
     const productQueue = productsWithData.map(p => ({
       product: p,
       remainingQty: p.quantity,
-      hasOpeningStock: false // Czy już ma tacę na otwarcie
+      // Zapas na pierwszą godzinę = ~20% całości fali (fala 1 ma ~5 godzin)
+      firstHourStock: Math.ceil(p.quantity * 0.2)
     }));
 
-    // FAZA 1: Pierwsza taca każdego produktu (zapas na otwarcie)
+    // FAZA 1a: Pierwsza taca każdego produktu (minimum na otwarcie)
     const openingTrays = [];
     productQueue.forEach(item => {
       if (item.remainingQty > 0) {
@@ -104,11 +105,30 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
           program: item.product.bakingProgram,
           programName: item.product.programName,
           bakingTime: item.product.bakingTime,
-          priority: 30000 + item.product.priority, // Najwyższy priorytet
+          priority: 40000 + item.product.priority, // Najwyższy priorytet
           phase: 'opening'
         });
         item.remainingQty -= qtyForOpening;
-        item.hasOpeningStock = true;
+        item.firstHourStock -= qtyForOpening;
+      }
+    });
+
+    // FAZA 1b: Dodatkowe tace na pierwszą godzinę
+    const firstHourTrays = [];
+    productQueue.forEach(item => {
+      while (item.firstHourStock > 0 && item.remainingQty > 0) {
+        const qtyToAdd = Math.min(item.remainingQty, item.product.unitsPerTray, item.firstHourStock);
+        firstHourTrays.push({
+          id: trayId++,
+          products: [{ product: item.product, quantity: qtyToAdd }],
+          program: item.product.bakingProgram,
+          programName: item.product.programName,
+          bakingTime: item.product.bakingTime,
+          priority: 30000 + item.product.priority, // Bardzo wysoki priorytet
+          phase: 'firstHour'
+        });
+        item.remainingQty -= qtyToAdd;
+        item.firstHourStock -= qtyToAdd;
       }
     });
 
@@ -149,7 +169,7 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
     });
 
     // Połącz wszystkie tace i sortuj według priorytetu
-    allTrays.push(...openingTrays, ...keyProductTrays, ...regularTrays);
+    allTrays.push(...openingTrays, ...firstHourTrays, ...keyProductTrays, ...regularTrays);
     allTrays.sort((a, b) => b.priority - a.priority);
 
     // Pogrupuj według programu (dla batchy)
