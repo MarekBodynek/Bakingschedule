@@ -1303,10 +1303,15 @@ const BakeryPlanningSystem = () => {
         if (!newPlans[2]) newPlans[2] = {};
         if (!newPlans[3]) newPlans[3] = {};
         
+        // Pomnóż wartości historyczne przez packageQuantity dla produktów pakowanych
+        const finalHist1 = product.isPackaged ? hist1 * product.packageQuantity : hist1;
+        const finalHist2 = product.isPackaged ? hist2 * product.packageQuantity : hist2;
+        const finalHist3 = product.isPackaged ? hist3 * product.packageQuantity : hist3;
+
         newPlans[1][product.sku] = {
           quantity: finalQty1,
           originalQuantity: finalQty1, // Pierwotna wygenerowana wartość
-          historical: Math.round(hist1),
+          historical: Math.round(finalHist1),
           buffer: Math.round(buffer1 * 100),
           adjustmentReason: reason1 + packagingNote,
           isPackaged: product.isPackaged
@@ -1315,7 +1320,7 @@ const BakeryPlanningSystem = () => {
         newPlans[2][product.sku] = {
           quantity: finalQty2,
           originalQuantity: finalQty2, // Pierwotna wygenerowana wartość
-          historical: Math.round(hist2),
+          historical: Math.round(finalHist2),
           buffer: Math.round(buffer2 * 100),
           adjustmentReason: reason2 + packagingNote,
           isPackaged: product.isPackaged
@@ -1324,7 +1329,7 @@ const BakeryPlanningSystem = () => {
         newPlans[3][product.sku] = {
           quantity: finalQty3,
           originalQuantity: finalQty3, // Pierwotna wygenerowana wartość
-          historical: Math.round(hist3),
+          historical: Math.round(finalHist3),
           buffer: Math.round(buffer3 * 100),
           adjustmentReason: reason3 + packagingNote,
           isPackaged: product.isPackaged
@@ -1388,11 +1393,12 @@ const BakeryPlanningSystem = () => {
         // Apply package multiplier for packaged products
         const baseQuantity = Math.max(0, quantity);
         const finalQuantity = product.isPackaged ? baseQuantity * product.packageQuantity : baseQuantity;
+        const finalHistorical = product.isPackaged ? historicalAvg * product.packageQuantity : historicalAvg;
         const packagingNote = product.isPackaged ? ` (Večpak ${product.packageQuantity}x - peka v kosih)` : '';
-        
+
         newPlan[product.sku] = {
           quantity: finalQuantity,
-          historical: Math.round(historicalAvg),
+          historical: Math.round(finalHistorical),
           buffer: Math.round(buffer * 100),
           adjustmentReason: adjustmentReason + packagingNote,
           isPackaged: product.isPackaged
