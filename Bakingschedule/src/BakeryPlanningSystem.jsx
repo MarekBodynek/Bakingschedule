@@ -641,13 +641,10 @@ const BakeryPlanningSystem = () => {
         // 🔥 Automatyczne rozpoznawanie pakowania (np. 5x60, 3x80)
         const packagingInfo = parsePackagingInfo(productName);
 
-        // Get isKeyProduct from config file
-        const isKeyProduct = configProductMap[s.eanCode]?.isKeyProduct || false;
-
         uniqueProducts.push({
           sku: s.eanCode,
           name: productName,
-          isKeyProduct: isKeyProduct,
+          isKeyProduct: false, // Will be set based on TOP 5
           isPackaged: packagingInfo.isPackaged,
           packageQuantity: packagingInfo.quantity,
           packageWeight: packagingInfo.weight || 0,
@@ -655,12 +652,17 @@ const BakeryPlanningSystem = () => {
         });
       }
     });
-    
-    setProducts(uniqueProducts);
 
-    // ✨ NOWA FUNKCJONALNOŚĆ: Wykryj TOP 5 i stockouts
+    // ✨ Wykryj TOP 5 i oznacz jako KLJUČNO
     const top5 = getTopFastMovingProducts(sales2025Local, uniqueProducts, 28);
     setFastMovingSkus(top5);
+
+    // Oznacz TOP 5 jako key products
+    uniqueProducts.forEach(product => {
+      product.isKeyProduct = top5.includes(product.sku);
+    });
+
+    setProducts(uniqueProducts);
 
     const stockouts = detectAllStockouts(sales2025Local, uniqueProducts, 28);
     setDetectedStockouts(stockouts);
@@ -2108,26 +2110,25 @@ const BakeryPlanningSystem = () => {
         onSave={(config) => {
           console.log('⚙️ Oven configuration saved:', config);
 
-          // ✅ CRITICAL FIX: Rebuild products with config names and key product flag after config is saved
+          // ✅ Update product names from config (isKeyProduct is based on TOP 5, not config)
           if (config.productConfig && config.productConfig.length > 0 && products.length > 0) {
             const configMap = {};
             config.productConfig.forEach(cp => {
               configMap[cp.sku] = {
-                name: cp.name,
-                isKeyProduct: cp.isKeyProduct || false
+                name: cp.name
               };
             });
 
-            // Update product names and key product flag from config
+            // Update product names from config, keep isKeyProduct from TOP 5
             const updatedProducts = products.map(p => ({
               ...p,
-              name: configMap[p.sku]?.name || p.name,
-              isKeyProduct: configMap[p.sku]?.isKeyProduct || false
+              name: configMap[p.sku]?.name || p.name
+              // isKeyProduct is preserved from TOP 5 calculation
             }));
 
             setProducts(updatedProducts);
             const keyProductCount = updatedProducts.filter(p => p.isKeyProduct).length;
-            console.log(`✅ Updated ${updatedProducts.filter(p => configMap[p.sku]).length} product names from config (${keyProductCount} key products)`);
+            console.log(`✅ Updated ${updatedProducts.filter(p => configMap[p.sku]).length} product names from config (${keyProductCount} key products from TOP 5)`);
           }
 
           // ✅ Save wave configuration to state
