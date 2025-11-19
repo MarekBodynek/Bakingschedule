@@ -20,14 +20,22 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
   const ovenSettings = getOvenSettings();
 
   /**
-   * Tworzy konkretne tace z produktami i planuje kolejność pieczenia
+   * NOWA LOGIKA PAKOWANIA TAC
+   *
+   * Cel: Minimalizacja tac MIXED, maksymalizacja wykorzystania pojemności
+   *
+   * Algorytm:
+   * 1. Agreguj ilości po SKU (nie rozkładaj od razu na tace)
+   * 2. Twórz tace SINGLE (pełne jednorodne)
+   * 3. Twórz tace MIXED z resztek (zachłannie, minimalizując ich liczbę)
+   * 4. Sortuj: Faza → SINGLE przed MIXED → Popularność → Grupowanie po SKU
    */
   const trayAllocation = useMemo(() => {
     if (!wavePlan || Object.keys(wavePlan).length === 0) {
       return { batches: [], totalTrays: 0, totalTime: 0 };
     }
 
-    // 1. Przygotuj produkty z priorytetami
+    // KROK 1: Przygotuj produkty z metadanymi
     const productsWithData = products.map(product => {
       const planData = wavePlan[product.sku];
       if (!planData || planData.quantity === 0) return null;
@@ -49,7 +57,7 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
         }
       }
 
-      // Priorytet bazowany na sprzedaży w danej fali
+      // Priorytet bazowany na sprzedaży (popularność)
       let priority = 0;
       priority += product.isKeyProduct ? 10000 : 0;
       priority += planData.quantity * 100;
@@ -69,10 +77,10 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
       };
     }).filter(Boolean);
 
-    // 2. Sortuj według priorytetu (najpopularniejsze najpierw)
+    // Sortuj według priorytetu (najpopularniejsze najpierw)
     productsWithData.sort((a, b) => b.priority - a.priority);
 
-    // 3. Pogrupuj produkty według programu pieczenia
+    // KROK 2: Agreguj ilości po programie pieczenia
     const productsByProgram = {};
     productsWithData.forEach(product => {
       if (!productsByProgram[product.bakingProgram]) {
@@ -81,113 +89,117 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
       productsByProgram[product.bakingProgram].push(product);
     });
 
-    // 4. NOWA LOGIKA: Otwarcie → Pierwsza godzina → Kluczowe → Reszta
-    // z pakowaniem wielu produktów na jedną tacę (MIXED)
     const allTrays = [];
     let trayId = 1;
     const traysByProgram = {};
 
-    // Przygotuj kolejkę produktów z pozostałymi ilościami
-    const productQueue = productsWithData.map(p => ({
-      product: p,
-      remainingQty: p.quantity,
-      // Zapas na pierwszą godzinę = ~20% całości fali (fala 1 ma ~5 godzin)
-      firstHourStock: Math.ceil(p.quantity * 0.2)
-    }));
+    // KROK 3: Dla każdego programu - twórz tace SINGLE, zbieraj resztki
+    Object.entries(productsByProgram).forEach(([program, programProducts]) => {
+      const remainders = []; // { product, remainder }
 
-    // Funkcja do pakowania produktów na tace z obsługą MIXED
-    const packProductsIntoTrays = (items, priorityBase, phase) => {
-      const trays = [];
-      // Grupuj według programu
-      const byProgram = {};
-      items.forEach(item => {
-        const prog = item.product.bakingProgram;
-        if (!byProgram[prog]) byProgram[prog] = [];
-        byProgram[prog].push(item);
+      // Dla każdego produktu w programie
+      programProducts.forEach(product => {
+        const capacity = product.unitsPerTray;
+        const totalQty = product.quantity;
+
+        // Oblicz pełne tace i resztę
+        const fullTrays = Math.floor(totalQty / capacity);
+        const remainder = totalQty % capacity;
+
+        // Utwórz pełne tace SINGLE (jednorodne)
+        for (let i = 0; i < fullTrays; i++) {
+          allTrays.push({
+            id: trayId++,
+            products: [{ product, quantity: capacity }],
+            program: parseInt(program),
+            programName: product.programName,
+            bakingTime: product.bakingTime,
+            priority: product.priority,
+            type: 'SINGLE',
+            mainSku: product.sku
+          });
+        }
+
+        // Zapisz resztę do mieszania
+        if (remainder > 0) {
+          remainders.push({ product, remainder });
+        }
       });
 
-      // Dla każdego programu pakuj produkty na tace
-      Object.entries(byProgram).forEach(([program, programItems]) => {
+      // KROK 4: Twórz tace MIXED z resztek (zachłannie)
+      if (remainders.length > 0) {
+        // Sortuj resztki po priorytecie (najpopularniejsze najpierw)
+        remainders.sort((a, b) => b.product.priority - a.product.priority);
+
+        // Ustal pojemność tacy dla tego programu (weź z pierwszego produktu)
+        const groupCapacity = remainders[0]?.product.unitsPerTray || 10;
+
         let currentTray = null;
-        let currentCapacity = 0;
-        const maxCapacity = programItems[0]?.product.unitsPerTray || 10;
+        let freeSpace = 0;
 
-        programItems.forEach(item => {
-          // Określ ilość do spakowania w zależności od fazy
-          let qtyToPack;
-          if (phase === 'opening') {
-            // Faza 1a: tylko 1 taca na produkt (minimum na otwarcie)
-            qtyToPack = Math.min(item.remainingQty, item.product.unitsPerTray);
-          } else if (phase === 'firstHour') {
-            // Faza 1b: dodatkowe ~20% na pierwszą godzinę
-            qtyToPack = Math.min(item.firstHourStock, item.remainingQty);
-          } else {
-            // Faza 2 i 3: wszystko pozostałe
-            qtyToPack = item.remainingQty;
-          }
+        remainders.forEach(item => {
+          let remaining = item.remainder;
 
-          while (qtyToPack > 0) {
+          while (remaining > 0) {
             // Utwórz nową tacę jeśli nie ma lub jest pełna
-            if (!currentTray || currentCapacity >= maxCapacity) {
-              if (currentTray) trays.push(currentTray);
+            if (!currentTray || freeSpace === 0) {
+              if (currentTray && currentTray.products.length > 0) {
+                allTrays.push(currentTray);
+              }
               currentTray = {
                 id: trayId++,
                 products: [],
                 program: parseInt(program),
                 programName: item.product.programName,
                 bakingTime: item.product.bakingTime,
-                priority: priorityBase + item.product.priority,
-                phase: phase
+                priority: item.product.priority,
+                type: 'MIXED',
+                mainSku: null
               };
-              currentCapacity = 0;
+              freeSpace = groupCapacity;
             }
 
-            // Dodaj produkt na tacę
-            const spaceLeft = maxCapacity - currentCapacity;
-            const qtyToAdd = Math.min(qtyToPack, spaceLeft);
-
+            // Dodaj ile się zmieści
+            const take = Math.min(remaining, freeSpace);
             currentTray.products.push({
               product: item.product,
-              quantity: qtyToAdd
+              quantity: take
             });
 
-            currentCapacity += qtyToAdd;
-            qtyToPack -= qtyToAdd;
-            item.remainingQty -= qtyToAdd;
-            if (phase === 'firstHour') {
-              item.firstHourStock -= qtyToAdd;
-            }
+            remaining -= take;
+            freeSpace -= take;
           }
         });
 
-        // Dodaj ostatnią tacę
+        // Dodaj ostatnią tacę MIXED
         if (currentTray && currentTray.products.length > 0) {
-          trays.push(currentTray);
+          // Oznacz mainSku dla tacy MIXED (produkt z największą ilością)
+          const mainProduct = currentTray.products.reduce((max, p) =>
+            p.quantity > max.quantity ? p : max
+          );
+          currentTray.mainSku = mainProduct.product.sku;
+          allTrays.push(currentTray);
         }
-      });
+      }
+    });
 
-      return trays;
-    };
+    // KROK 5: Sortuj wszystkie tace według kryteriów biznesowych
+    allTrays.sort((a, b) => {
+      const aHomogeneous = a.type === 'SINGLE';
+      const bHomogeneous = b.type === 'SINGLE';
 
-    // FAZA 1a: Pierwsza taca każdego produktu (minimum na otwarcie)
-    const openingItems = productQueue.filter(item => item.remainingQty > 0);
-    const openingTrays = packProductsIntoTrays(openingItems, 40000, 'opening');
+      // 1. SINGLE przed MIXED (jednorodne są łatwiejsze)
+      if (aHomogeneous !== bHomogeneous) return bHomogeneous - aHomogeneous;
 
-    // FAZA 1b: Dodatkowe tace na pierwszą godzinę
-    const firstHourItems = productQueue.filter(item => item.firstHourStock > 0 && item.remainingQty > 0);
-    const firstHourTrays = packProductsIntoTrays(firstHourItems, 30000, 'firstHour');
+      // 2. W ramach jednorodnych: grupuj ten sam produkt razem
+      if (aHomogeneous && bHomogeneous) {
+        const skuCompare = a.mainSku.localeCompare(b.mainSku);
+        if (skuCompare !== 0) return skuCompare;
+      }
 
-    // FAZA 2: Dodatkowe tace dla kluczowych produktów (TOP 5)
-    const keyItems = productQueue.filter(item => item.product.isKey && item.remainingQty > 0);
-    const keyProductTrays = packProductsIntoTrays(keyItems, 20000, 'key');
-
-    // FAZA 3: Pozostałe tace dla zwykłych produktów
-    const regularItems = productQueue.filter(item => !item.product.isKey && item.remainingQty > 0);
-    const regularTrays = packProductsIntoTrays(regularItems, 10000, 'regular');
-
-    // Połącz wszystkie tace i sortuj według priorytetu
-    allTrays.push(...openingTrays, ...firstHourTrays, ...keyProductTrays, ...regularTrays);
-    allTrays.sort((a, b) => b.priority - a.priority);
+      // 3. Według priorytetu (popularność)
+      return b.priority - a.priority;
+    });
 
     // Przenumeruj tace sekwencyjnie po posortowaniu
     allTrays.forEach((tray, index) => {
@@ -201,28 +213,6 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
         traysByProgram[program] = [];
       }
       traysByProgram[program].push(tray);
-    });
-
-    // OPTYMALIZACJA: Sortuj tace w ramach każdego programu tak, aby jednorodne były razem
-    // Jednorodne tace (1 produkt) są łatwiejsze do obsługi przez pracowników
-    Object.values(traysByProgram).forEach(trays => {
-      trays.sort((a, b) => {
-        const aHomogeneous = a.products.length === 1;
-        const bHomogeneous = b.products.length === 1;
-
-        // 1. Najpierw jednorodne przed mieszanymi
-        if (aHomogeneous !== bHomogeneous) return bHomogeneous - aHomogeneous;
-
-        // 2. W ramach jednorodnych: grupuj ten sam produkt razem, potem według priorytetu
-        if (aHomogeneous && bHomogeneous) {
-          const skuCompare = a.products[0].product.sku.localeCompare(b.products[0].product.sku);
-          if (skuCompare !== 0) return skuCompare;
-          return b.priority - a.priority;
-        }
-
-        // 3. W ramach mieszanych: według priorytetu
-        return b.priority - a.priority;
-      });
     });
 
     // 5. Zaplanuj batche pieczenia
