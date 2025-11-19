@@ -6,6 +6,48 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [3.1.0] - 2025-11-19
+
+### 🎉 New Features
+
+#### 🔑 Automatyczne TOP 5 Key Products
+- Automatyczne wykrywanie TOP 5 produktów na podstawie sprzedaży
+- Usunięto ręczne oznaczanie w pliku konfiguracyjnym (kolumna E)
+- Dynamiczne przeliczanie przy każdym wczytaniu danych
+
+#### 📦 Ulepszone pakowanie MIXED
+- Obsługa wielu produktów na jednej tacy (ten sam program pieczenia)
+- Fazy priorytetów: Opening → First Hour → Key Products → Regular
+- Sekwencyjna numeracja tac po sortowaniu
+
+#### ❓ System pomocy
+- Klawisz H pokazuje/ukrywa instrukcję obsługi
+- Przycisk "Pomoč" w nagłówku
+- Instrukcje drukowania fal na stronie głównej
+
+#### 💰 Poprawki dni specjalnych
+- Naprawiona logika dni wypłat emerytur (ostatni dzień roboczy miesiąca)
+- Poprawki stref czasowych w obliczeniach dat
+- Naprawione wykrywanie dni przed świętami
+
+#### 📊 Historyczne w jednostkach wypieku
+- Kolumna "Zgo" pokazuje sprzedaż w jednostkach wypieku dla produktów pakowanych
+- Dla 5x PAK: sprzedaż × 5 = jednostki do wypieku
+- Dynamiczne przeliczanie przy zmianie konfiguracji produktu
+
+### 🔄 Changed
+- Przesunięte indeksy kolumn po usunięciu kolumny KEY (E)
+- Usunięto katalog `Bake Of Plan Windows` (nieużywany)
+- Skonsolidowano dokumentację do README.md i CHANGELOG.md
+- Przeniesiono dokumenty do katalogu root
+
+### 🐛 Bug Fixes
+- Naprawione problemy ze strefami czasowymi w porównaniach dat
+- Naprawiona numeracja tac (sekwencyjna po sortowaniu)
+- Naprawione wykrywanie produktów pakowanych
+
+---
+
 ## [3.0.0] - 2025-01-05
 
 ### 🎉 Major Features Added

@@ -89,10 +89,11 @@ Bakingschedule/
 │
 ├── package.json                        # Dependencies
 ├── vite.config.js                      # Vite configuration
-├── tailwind.config.js                  # Tailwind CSS config
+└── tailwind.config.js                  # Tailwind CSS config
+
+Root/
 ├── README.md                           # This documentation
-├── INTEGRATION_GUIDE.md                # Integration instructions
-└── Baking algorithm.md                 # Algorithm specification
+└── CHANGELOG.md                        # Version history
 ```
 
 ---
@@ -394,9 +395,10 @@ import MetricsDashboard from './components/MetricsDashboard';
 
 ### Key Products:
 
-Hardcoded in code:
+Automatycznie wykrywane TOP 5 produktów na podstawie sprzedaży:
 ```javascript
-isKey: ['3831002150359', '3831002150205'].includes(sku)
+const top5 = getTopFastMovingProducts(sales2025Local, uniqueProducts, 28);
+product.isKeyProduct = top5.includes(product.sku);
 ```
 
 Minimum for Wave 3: **5 pieces**
@@ -447,8 +449,8 @@ Stored in localStorage via OvenConfigurationModal:
    - Mobile app for managers
    - Push notifications for alerts
 
-6. **Electron Desktop App**
-   - Portable Windows .exe (already in progress: `Bake Of Plan Windows/`)
+6. **Desktop App**
+   - Portable Windows .exe
    - Offline operation
    - USB transfer capability
 
@@ -464,8 +466,8 @@ Proprietary - All rights reserved
 
 System created for bakery in Šentjur, Slovenia.
 
-**Version:** 3.0
-**Date:** January 2025
+**Version:** 3.1
+**Date:** November 2025
 **Status:** ✅ Production ready
 
 ---
@@ -485,7 +487,10 @@ A: The system learns:
 - Recommended: weekly weight optimization (`runWeeklyOptimization()`)
 
 ### Q: Can I change which products are "key"?
-A: Yes, edit the array in code: `isKey: ['SKU1', 'SKU2'].includes(sku)`
+A: Key products are now automatically detected as TOP 5 based on sales data. The system recalculates this each time you load data.
+
+### Q: How do I access the help instructions?
+A: Press **H** key on your keyboard to show/hide the help modal. You can also click the "Pomoč" button in the header.
 
 ### Q: How do I add more baking programs?
 A: Upload a new Excel file with program configurations via the Oven Configuration modal, or manually edit program settings in localStorage.
@@ -565,7 +570,8 @@ git push origin working  # lub main dla produkcji
 
 ## 📚 **Dokumentacja techniczna**
 
-Szczegółowa specyfikacja algorytmu znajduje się w pliku **[Baking algorithm.md](Baking%20algorithm.md)**.
-
 Historia wersji w **[CHANGELOG.md](CHANGELOG.md)**.
+
+### Skróty klawiszowe:
+- **H** - Pokaż/ukryj instrukcję obsługi
 
