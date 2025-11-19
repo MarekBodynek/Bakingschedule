@@ -150,8 +150,9 @@ const BakeryPlanningSystem = () => {
   // Helper function to get wave configuration for a specific date
   const getWaveConfigForDate = (dateStr) => {
     const date = new Date(dateStr);
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const dayOfWeek = dayNames[date.getDay()];
+    // Map day index to Slovenian day names (as used in config file)
+    const dayNamesSlovenian = ['nedelja', 'ponedeljek', 'torek', 'sreda', 'četrtek', 'petek', 'sobota'];
+    const dayOfWeek = dayNamesSlovenian[date.getDay()];
 
     // Return day-specific config if available, otherwise default
     if (waveConfig[dayOfWeek]) {
