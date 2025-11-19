@@ -154,10 +154,14 @@ const BakeryPlanningSystem = () => {
     const dayNamesSlovenian = ['nedelja', 'ponedeljek', 'torek', 'sreda', 'četrtek', 'petek', 'sobota'];
     const dayOfWeek = dayNamesSlovenian[date.getDay()];
 
+    console.log('🔍 getWaveConfigForDate:', { dateStr, dayOfWeek, availableKeys: Object.keys(waveConfig), hasDay: !!waveConfig[dayOfWeek] });
+
     // Return day-specific config if available, otherwise default
     if (waveConfig[dayOfWeek]) {
+      console.log('✅ Using config for', dayOfWeek, ':', waveConfig[dayOfWeek]);
       return waveConfig[dayOfWeek];
     }
+    console.log('⚠️ Using default config');
     return waveConfig.default || {
       opening: '07:00',
       closing: '20:00',
