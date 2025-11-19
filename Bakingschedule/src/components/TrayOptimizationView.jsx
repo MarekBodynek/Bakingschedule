@@ -297,6 +297,9 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
                 {t.ovens || 'Ovens'}: {ovenSettings.individualCapacities.map((cap, idx) => `${idx + 1}. (${cap})`).join(' • ')} = {ovenSettings.ovenCapacity} {t.traysTotal || 'trays total'}
               </p>
             )}
+            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700 print:hidden">
+              <strong>{t.printInstructions || 'Kako natisniti'}:</strong> {t.printInstructionsText || 'Klikni gumb "Natisni" za tiskanje tega vala. Za tiskanje druge vale, pojdi na zavihek te vale in ponovi.'}
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right space-y-1 print:hidden">
