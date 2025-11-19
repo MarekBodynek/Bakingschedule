@@ -53,6 +53,9 @@ const OvenConfigurationModal = ({
         if (savedPrograms.ovenSettings) {
           setOvenSettings(savedPrograms.ovenSettings);
         }
+        if (savedPrograms.waveConfig) {
+          setWaveConfig(savedPrograms.waveConfig);
+        }
       }
     }
   }, [isOpen]);
@@ -327,6 +330,48 @@ const OvenConfigurationModal = ({
     }));
   };
 
+  // Aktualizacja konfiguracji godzin otwarcia i fal
+  const updateWaveConfig = (day, field, value) => {
+    setWaveConfig(prev => {
+      const newConfig = { ...prev };
+      if (!newConfig[day]) {
+        newConfig[day] = {
+          opening: '',
+          closing: '',
+          wave1: { start: '', finish: '', bakingTime: '' },
+          wave2: null,
+          wave3: { start: '', finish: '', bakingTime: '' },
+          isClosed: false
+        };
+      }
+
+      // Handle nested fields like "wave1.start"
+      if (field.includes('.')) {
+        const [wave, subField] = field.split('.');
+        newConfig[day] = {
+          ...newConfig[day],
+          [wave]: {
+            ...newConfig[day][wave],
+            [subField]: value
+          }
+        };
+        // Recalculate baking time (1 hour before start)
+        if (subField === 'start' && value) {
+          const [hours, minutes] = value.split(':').map(Number);
+          const bakingHour = hours - 1;
+          newConfig[day][wave].bakingTime = `${bakingHour.toString().padStart(2, '0')}:${(minutes || 0).toString().padStart(2, '0')}`;
+        }
+      } else {
+        newConfig[day] = {
+          ...newConfig[day],
+          [field]: value
+        };
+      }
+
+      return newConfig;
+    });
+  };
+
   // Zapisz konfigurację
   const handleSave = () => {
     if (productConfig.length === 0) {
@@ -373,7 +418,7 @@ const OvenConfigurationModal = ({
       <div className="bg-white rounded-lg shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-800">{translations?.configTitle || '⚙️ Konfiguracija pečice'}</h2>
+          <h2 className="text-2xl font-bold text-gray-800">{translations?.configTitle || '⚙️ Konfiguracija'}</h2>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 transition-colors"
@@ -622,11 +667,106 @@ const OvenConfigurationModal = ({
             </div>
           )}
 
+          {/* Opening Hours and Waves Configuration */}
+          {Object.keys(waveConfig).length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-800">
+                {translations?.openingHoursWaves || '4. Godziny otwarcia i fale'}
+              </h3>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-3 py-2 text-left border">{translations?.day || 'Dan'}</th>
+                      <th className="px-3 py-2 text-center border">{translations?.opening || 'Odprtje'}</th>
+                      <th className="px-3 py-2 text-center border">{translations?.closing || 'Zaprtje'}</th>
+                      <th className="px-3 py-2 text-center border bg-green-50">{translations?.wave1Start || 'Val 1'}</th>
+                      <th className="px-3 py-2 text-center border bg-blue-50">{translations?.wave2Start || 'Val 2'}</th>
+                      <th className="px-3 py-2 text-center border bg-orange-50">{translations?.wave3Start || 'Val 3'}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => {
+                      const dayConfig = waveConfig[day];
+                      if (!dayConfig) return null;
+
+                      const dayNames = {
+                        monday: translations?.monday || 'Ponedeljek',
+                        tuesday: translations?.tuesday || 'Torek',
+                        wednesday: translations?.wednesday || 'Sreda',
+                        thursday: translations?.thursday || 'Četrtek',
+                        friday: translations?.friday || 'Petek',
+                        saturday: translations?.saturday || 'Sobota',
+                        sunday: translations?.sunday || 'Nedelja'
+                      };
+
+                      return (
+                        <tr key={day} className={`border-b hover:bg-gray-50 ${dayConfig.isClosed ? 'bg-red-50' : ''}`}>
+                          <td className="px-3 py-2 border font-medium">{dayNames[day]}</td>
+                          <td className="px-2 py-1 border">
+                            <input
+                              type="time"
+                              value={dayConfig.opening || ''}
+                              onChange={(e) => updateWaveConfig(day, 'opening', e.target.value)}
+                              className="w-full px-2 py-1 border rounded text-center text-sm"
+                              disabled={dayConfig.isClosed}
+                            />
+                          </td>
+                          <td className="px-2 py-1 border">
+                            <input
+                              type="time"
+                              value={dayConfig.closing || ''}
+                              onChange={(e) => updateWaveConfig(day, 'closing', e.target.value)}
+                              className="w-full px-2 py-1 border rounded text-center text-sm"
+                              disabled={dayConfig.isClosed}
+                            />
+                          </td>
+                          <td className="px-2 py-1 border bg-green-50">
+                            <input
+                              type="time"
+                              value={dayConfig.wave1?.start || ''}
+                              onChange={(e) => updateWaveConfig(day, 'wave1.start', e.target.value)}
+                              className="w-full px-2 py-1 border rounded text-center text-sm"
+                              disabled={dayConfig.isClosed}
+                            />
+                          </td>
+                          <td className="px-2 py-1 border bg-blue-50">
+                            <input
+                              type="time"
+                              value={dayConfig.wave2?.start || ''}
+                              onChange={(e) => updateWaveConfig(day, 'wave2.start', e.target.value)}
+                              className="w-full px-2 py-1 border rounded text-center text-sm"
+                              disabled={dayConfig.isClosed}
+                            />
+                          </td>
+                          <td className="px-2 py-1 border bg-orange-50">
+                            <input
+                              type="time"
+                              value={dayConfig.wave3?.start || ''}
+                              onChange={(e) => updateWaveConfig(day, 'wave3.start', e.target.value)}
+                              className="w-full px-2 py-1 border rounded text-center text-sm"
+                              disabled={dayConfig.isClosed}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
+                <strong>{translations?.bakingTimeNote || 'Opomba'}:</strong> {translations?.bakingTimeCalculation || 'Čas peke se izračuna samodejno (1 uro pred začetkom vala)'}
+              </div>
+            </div>
+          )}
+
           {/* Product Preview */}
           {productConfig.length > 0 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800">
-                {translations?.productPreview || '4. Podgląd produktów'} {!showAllProducts && `${translations?.firstProducts || '(pierwsze 10)'}`}
+                {translations?.productPreview || '5. Podgląd produktów'} {!showAllProducts && `${translations?.firstProducts || '(pierwsze 10)'}`}
               </h3>
 
               <div className="overflow-x-auto">
