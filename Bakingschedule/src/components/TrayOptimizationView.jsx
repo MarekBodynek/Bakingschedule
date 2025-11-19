@@ -81,63 +81,84 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
       productsByProgram[product.bakingProgram].push(product);
     });
 
-    // 4. Dla każdego programu: pakuj produkty na tace (bin-packing)
+    // 4. NOWA LOGIKA: Najpierw zapas na otwarcie, potem kluczowe, potem reszta
     const allTrays = [];
     let trayId = 1;
     const traysByProgram = {};
 
-    Object.entries(productsByProgram).forEach(([program, products]) => {
-      traysByProgram[program] = [];
+    // Przygotuj kolejkę produktów z pozostałymi ilościami
+    const productQueue = productsWithData.map(p => ({
+      product: p,
+      remainingQty: p.quantity,
+      hasOpeningStock: false // Czy już ma tacę na otwarcie
+    }));
 
-      // Przygotuj kolejkę produktów z pozostałymi ilościami
-      const productQueue = products.map(p => ({
-        product: p,
-        remainingQty: p.quantity
-      }));
-
-      // Pakuj produkty na tace sekwencyjnie
-      let currentTray = null;
-      let currentTrayCapacity = 0;
-
-      productQueue.forEach(item => {
-        while (item.remainingQty > 0) {
-          // Jeśli nie ma aktualnej tacy lub jest pełna, utwórz nową
-          if (!currentTray || currentTrayCapacity >= item.product.unitsPerTray) {
-            if (currentTray) {
-              allTrays.push(currentTray);
-              traysByProgram[program].push(currentTray);
-            }
-
-            currentTray = {
-              id: trayId++,
-              products: [], // Tablica produktów na tej tacy
-              program: parseInt(program),
-              programName: item.product.programName,
-              bakingTime: item.product.bakingTime,
-              priority: item.product.priority
-            };
-            currentTrayCapacity = 0;
-          }
-
-          // Dodaj tyle produktu ile się zmieści na tacy
-          const spaceLeft = item.product.unitsPerTray - currentTrayCapacity;
-          const qtyToAdd = Math.min(item.remainingQty, spaceLeft);
-
-          currentTray.products.push({
-            product: item.product,
-            quantity: qtyToAdd
-          });
-
-          currentTrayCapacity += qtyToAdd;
-          item.remainingQty -= qtyToAdd;
-        }
-      });
-
-      // Dodaj ostatnią tacę jeśli istnieje
-      if (currentTray && currentTray.products.length > 0) {
-        allTrays.push(currentTray);
-        traysByProgram[program].push(currentTray);
+    // FAZA 1: Pierwsza taca każdego produktu (zapas na otwarcie)
+    const openingTrays = [];
+    productQueue.forEach(item => {
+      if (item.remainingQty > 0) {
+        const qtyForOpening = Math.min(item.remainingQty, item.product.unitsPerTray);
+        openingTrays.push({
+          id: trayId++,
+          products: [{ product: item.product, quantity: qtyForOpening }],
+          program: item.product.bakingProgram,
+          programName: item.product.programName,
+          bakingTime: item.product.bakingTime,
+          priority: 30000 + item.product.priority, // Najwyższy priorytet
+          phase: 'opening'
+        });
+        item.remainingQty -= qtyForOpening;
+        item.hasOpeningStock = true;
       }
+    });
+
+    // FAZA 2: Dodatkowe tace dla kluczowych produktów (TOP 5)
+    const keyProductTrays = [];
+    productQueue.filter(item => item.product.isKey && item.remainingQty > 0).forEach(item => {
+      while (item.remainingQty > 0) {
+        const qtyToAdd = Math.min(item.remainingQty, item.product.unitsPerTray);
+        keyProductTrays.push({
+          id: trayId++,
+          products: [{ product: item.product, quantity: qtyToAdd }],
+          program: item.product.bakingProgram,
+          programName: item.product.programName,
+          bakingTime: item.product.bakingTime,
+          priority: 20000 + item.product.priority, // Wysoki priorytet
+          phase: 'key'
+        });
+        item.remainingQty -= qtyToAdd;
+      }
+    });
+
+    // FAZA 3: Pozostałe tace dla zwykłych produktów
+    const regularTrays = [];
+    productQueue.filter(item => !item.product.isKey && item.remainingQty > 0).forEach(item => {
+      while (item.remainingQty > 0) {
+        const qtyToAdd = Math.min(item.remainingQty, item.product.unitsPerTray);
+        regularTrays.push({
+          id: trayId++,
+          products: [{ product: item.product, quantity: qtyToAdd }],
+          program: item.product.bakingProgram,
+          programName: item.product.programName,
+          bakingTime: item.product.bakingTime,
+          priority: 10000 + item.product.priority, // Normalny priorytet
+          phase: 'regular'
+        });
+        item.remainingQty -= qtyToAdd;
+      }
+    });
+
+    // Połącz wszystkie tace i sortuj według priorytetu
+    allTrays.push(...openingTrays, ...keyProductTrays, ...regularTrays);
+    allTrays.sort((a, b) => b.priority - a.priority);
+
+    // Pogrupuj według programu (dla batchy)
+    allTrays.forEach(tray => {
+      const program = tray.program;
+      if (!traysByProgram[program]) {
+        traysByProgram[program] = [];
+      }
+      traysByProgram[program].push(tray);
     });
 
     // 5. Zaplanuj batche pieczenia
