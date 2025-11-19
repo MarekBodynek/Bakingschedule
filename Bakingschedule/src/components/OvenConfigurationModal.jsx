@@ -119,9 +119,10 @@ const OvenConfigurationModal = ({
 
         // Parse oven configuration from columns 6-7 (NAZIV oven number, Number of Trays)
         // Row 5: [..., 1, 3, ...] means Oven 1 has 3 trays
-        if (i >= 4) {
+        if (i >= 4 && i <= 10) {
           const ovenNumber = parseInt(row[6]);
           const ovenTrays = parseInt(row[7]);
+          console.log(`Row ${i}: ovenNumber=${ovenNumber} (raw: ${row[6]}), ovenTrays=${ovenTrays} (raw: ${row[7]})`);
           if (ovenNumber && ovenTrays && !isNaN(ovenNumber) && !isNaN(ovenTrays)) {
             // Zapisz tylko jeśli jeszcze nie mamy tego pieca
             if (!ovenCapacities[ovenNumber - 1]) {

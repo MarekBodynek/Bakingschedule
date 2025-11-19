@@ -6,6 +6,22 @@ const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
 console.log('Testing parser logic...\n');
 
+// Show first 15 rows with all columns to understand structure
+console.log('📄 FILE STRUCTURE (first 15 rows):');
+console.log('='.repeat(120));
+for (let i = 0; i < Math.min(15, jsonData.length); i++) {
+  const row = jsonData[i];
+  console.log(`Row ${i}:`);
+  console.log(`  A-D (Products): [${row[0]}, ${row[1]}, ${row[2]}, ${row[3]}]`);
+  console.log(`  E (unused): [${row[4]}]`);
+  console.log(`  F-G (should be empty): [${row[5]}, ${row[6]}]`);
+  console.log(`  G-H (Ovens): [${row[6]}, ${row[7]}]`);
+  console.log(`  I (unused): [${row[8]}]`);
+  console.log(`  J-K (Programs): [${row[9]}, ${row[10]}]`);
+  console.log(`  L-T (Hours/Waves): [${row.slice(11, 20).join(', ')}]`);
+  console.log('-'.repeat(120));
+}
+
 const products = [];
 const programs = new Set();
 const ovenCapacities = [];
