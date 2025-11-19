@@ -117,12 +117,12 @@ const OvenConfigurationModal = ({
       for (let i = 0; i < jsonData.length; i++) {
         const row = jsonData[i];
 
-        // Parse oven configuration from columns 6-7 (NAZIV oven number, Number of Trays)
-        // Row 5: [..., 1, 3, ...] means Oven 1 has 3 trays
-        if (i >= 4 && i <= 10) {
-          const ovenNumber = parseInt(row[6]);
-          const ovenTrays = parseInt(row[7]);
-          console.log(`Row ${i}: ovenNumber=${ovenNumber} (raw: ${row[6]}), ovenTrays=${ovenTrays} (raw: ${row[7]})`);
+        // Parse oven configuration from columns 5-6 (F-G: oven number, Number of Trays)
+        // Row 2: [..., 1, 3, ...] means Oven 1 has 3 trays
+        if (i >= 2 && i <= 10) {
+          const ovenNumber = parseInt(row[5]);
+          const ovenTrays = parseInt(row[6]);
+          console.log(`Row ${i}: ovenNumber=${ovenNumber} (raw: ${row[5]}), ovenTrays=${ovenTrays} (raw: ${row[6]})`);
           if (ovenNumber && ovenTrays && !isNaN(ovenNumber) && !isNaN(ovenTrays)) {
             // Zapisz tylko jeśli jeszcze nie mamy tego pieca
             if (!ovenCapacities[ovenNumber - 1]) {
@@ -132,11 +132,11 @@ const OvenConfigurationModal = ({
           }
         }
 
-        // Parse program durations from columns 9-10 (program name, duration)
-        // Row 5: [..., "Program 1", 25, ...] means Program 1 takes 25 minutes
-        if (i >= 4) {
-          const programName = String(row[9] || '').trim();
-          const duration = parseInt(row[10]);
+        // Parse program durations from columns 8-9 (I-J: program name, duration)
+        // Row 2: [..., "Program 1", 25, ...] means Program 1 takes 25 minutes
+        if (i >= 2) {
+          const programName = String(row[8] || '').trim();
+          const duration = parseInt(row[9]);
           if (programName && duration && !isNaN(duration)) {
             const programMatch = programName.match(/program\s*(\d+)/i);
             if (programMatch) {
