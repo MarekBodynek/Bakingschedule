@@ -104,7 +104,7 @@ const OvenConfigurationModal = ({
       // 🔍 DEBUG: Show first 10 rows to understand file structure
       console.log('📄 First 10 rows of config file:');
       jsonData.slice(0, 10).forEach((row, idx) => {
-        console.log(`Row ${idx}:`, row.slice(0, 12)); // Show first 12 columns
+        console.log(`Row ${idx} (${row.length} cols):`, row.slice(0, 12), '| L-T:', row.slice(11, 20));
       });
 
       // Parse data - skip first 4 rows (store name, empty, section headers, column headers)

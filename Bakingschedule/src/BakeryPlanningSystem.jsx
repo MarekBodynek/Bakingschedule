@@ -150,17 +150,27 @@ const BakeryPlanningSystem = () => {
   // Helper function to get wave configuration for a specific date
   const getWaveConfigForDate = (dateStr) => {
     const date = new Date(dateStr);
-    // Map day index to Slovenian day names (as used in config file)
+    const dayIndex = date.getDay();
+
+    // Try both English and Slovenian day names
+    const dayNamesEnglish = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayNamesSlovenian = ['nedelja', 'ponedeljek', 'torek', 'sreda', 'četrtek', 'petek', 'sobota'];
-    const dayOfWeek = dayNamesSlovenian[date.getDay()];
 
-    console.log('🔍 getWaveConfigForDate:', { dateStr, dayOfWeek, availableKeys: Object.keys(waveConfig), hasDay: !!waveConfig[dayOfWeek] });
+    const dayEn = dayNamesEnglish[dayIndex];
+    const daySl = dayNamesSlovenian[dayIndex];
 
-    // Return day-specific config if available, otherwise default
-    if (waveConfig[dayOfWeek]) {
-      console.log('✅ Using config for', dayOfWeek, ':', waveConfig[dayOfWeek]);
-      return waveConfig[dayOfWeek];
+    console.log('🔍 getWaveConfigForDate:', { dateStr, dayEn, daySl, availableKeys: Object.keys(waveConfig) });
+
+    // Try English first, then Slovenian
+    if (waveConfig[dayEn]) {
+      console.log('✅ Using config for', dayEn, ':', waveConfig[dayEn]);
+      return waveConfig[dayEn];
     }
+    if (waveConfig[daySl]) {
+      console.log('✅ Using config for', daySl, ':', waveConfig[daySl]);
+      return waveConfig[daySl];
+    }
+
     console.log('⚠️ Using default config');
     return waveConfig.default || {
       opening: '07:00',
