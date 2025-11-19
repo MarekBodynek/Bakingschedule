@@ -64,6 +64,24 @@ Po konfiguracji Vercel będziesz mieć:
 
 ---
 
+## 🤖 Zasady dla Claude Code
+
+**KRYTYCZNE - Claude Code MUSI przestrzegać tych zasad:**
+
+1. **Pracuj TYLKO na branchu `working`** - wszystkie zmiany commituj i pushuj na `working`
+2. **NIGDY nie pushuj na `main` automatycznie** - nawet jeśli user powie "commituj i wypushuj"
+3. **Push na `main` TYLKO po wyraźnej zgodzie usera** - np. "wypushuj na main" lub "merguj do main"
+4. **Każda zgoda = JEDNA wysyłka** - po wykonaniu push na main, wracasz do zasady "nie wysyłam na main"
+5. **Po każdym uzyskaniu zgody** - wykonujesz JEDNĄ operację na main i natychmiast wracasz do pracy na `working`
+
+### Przykłady:
+- ❌ User: "commituj i wypushuj" → NIE pushuj na main
+- ✅ User: "commituj i wypushuj" → Pushuj na working
+- ✅ User: "wypushuj na main" → Pushuj na main (jednorazowo)
+- ✅ User: "merguj do main" → Merguj i pushuj na main (jednorazowo)
+
+---
+
 ## 🚀 Quick Commands
 
 ```bash
