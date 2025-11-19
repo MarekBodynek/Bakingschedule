@@ -148,18 +148,30 @@ const OvenConfigurationModal = ({
           }
         }
 
-        // Parse Opening Hours and Waves from columns L-T (indices 11-19)
+        // Parse Opening Hours and Waves from columns M-T (indices 12-20)
         // Row 3-9: Monday-Sunday data
+        // Note: Column L (11) is empty, data starts at M (12)
         if (i >= 2 && i <= 8) {
-          const dayOfWeek = String(row[11] || '').trim().toLowerCase();
-          const opening = String(row[12] || '').trim();
-          const closing = String(row[13] || '').trim();
-          const wave1Start = String(row[14] || '').trim();
-          const wave1Finish = String(row[15] || '').trim();
-          const wave2Start = String(row[16] || '').trim();
-          const wave2Finish = String(row[17] || '').trim();
-          const wave3Start = String(row[18] || '').trim();
-          const wave3Finish = String(row[19] || '').trim();
+          // Convert Excel decimal time to HH:MM string
+          const excelTimeToString = (value) => {
+            if (!value || value === 'closed' || value === '') return value || '';
+            if (typeof value === 'string') return value;
+            // Excel stores time as fraction of day (e.g., 0.2916... = 7/24 = 07:00)
+            const totalMinutes = Math.round(value * 24 * 60);
+            const hours = Math.floor(totalMinutes / 60);
+            const minutes = totalMinutes % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+          };
+
+          const dayOfWeek = String(row[12] || '').trim().toLowerCase();
+          const opening = excelTimeToString(row[13]);
+          const closing = excelTimeToString(row[14]);
+          const wave1Start = excelTimeToString(row[15]);
+          const wave1Finish = excelTimeToString(row[16]);
+          const wave2Start = excelTimeToString(row[17]);
+          const wave2Finish = excelTimeToString(row[18]);
+          const wave3Start = excelTimeToString(row[19]);
+          const wave3Finish = excelTimeToString(row[20]);
 
           if (dayOfWeek && (opening || closing)) {
             // Calculate baking times (1 hour before wave start)
