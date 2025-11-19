@@ -252,40 +252,41 @@ const BakeryPlanningSystem = () => {
     return holidays.includes(dateStr);
   };
 
+  // Helper function to format date as YYYY-MM-DD in local timezone
+  const formatDateLocal = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const isPreHoliday = (dateStr) => {
-    const date = new Date(dateStr);
+    const date = new Date(dateStr + 'T12:00:00'); // Use noon to avoid timezone issues
     const year = date.getFullYear();
     const holidays = getSlovenianHolidays(year);
     const nextDay = new Date(date);
     nextDay.setDate(date.getDate() + 1);
-    const nextDayStr = nextDay.toISOString().split('T')[0];
+    const nextDayStr = formatDateLocal(nextDay);
     return holidays.includes(nextDayStr);
   };
 
   const isPensionPaymentDay = (dateStr) => {
-    const date = new Date(dateStr);
+    const date = new Date(dateStr + 'T12:00:00'); // Use noon to avoid timezone issues
     const month = date.getMonth();
     const year = date.getFullYear();
     const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-    
-    let targetDay;
-    if (lastDayOfMonth >= 31) {
-      targetDay = 31;
-    } else {
-      targetDay = 30;
-    }
-    
-    if (targetDay > lastDayOfMonth) {
-      targetDay = lastDayOfMonth;
-    }
-    
-    let paymentDate = new Date(year, month, targetDay);
-    
-    while (paymentDate.getDay() === 0 || paymentDate.getDay() === 6 || isHoliday(paymentDate.toISOString().split('T')[0])) {
+
+    // W Słowenii emerytury wypłacane są ostatniego dnia roboczego miesiąca
+    let paymentDate = new Date(year, month, lastDayOfMonth);
+
+    // Cofnij do ostatniego dnia roboczego (nie weekend, nie święto)
+    let paymentDateStr = formatDateLocal(paymentDate);
+    while (paymentDate.getDay() === 0 || paymentDate.getDay() === 6 || isHoliday(paymentDateStr)) {
       paymentDate.setDate(paymentDate.getDate() - 1);
+      paymentDateStr = formatDateLocal(paymentDate);
     }
-    
-    return dateStr === paymentDate.toISOString().split('T')[0];
+
+    return dateStr === paymentDateStr;
   };
 
   const isHighSalesDay = (dateStr) => {
@@ -971,8 +972,10 @@ const BakeryPlanningSystem = () => {
         for (let month = 0; month < 12; month++) {
           for (let yearOffset = 0; yearOffset <= 1; yearOffset++) {
             const year = new Date(targetDate).getFullYear() - yearOffset;
-            const checkDate = new Date(year, month, 30);
-            const dateStr = checkDate.toISOString().split('T')[0];
+            // Ostatni dzień miesiąca
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            const checkDate = new Date(year, month, lastDay);
+            const dateStr = formatDateLocal(checkDate);
             if (isPensionPaymentDay(dateStr)) allPensionDays.push(dateStr);
           }
         }
