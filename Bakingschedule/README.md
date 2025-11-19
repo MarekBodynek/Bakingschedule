@@ -503,3 +503,69 @@ A: v3.0 adds:
 ---
 
 **🎉 Happy baking!**
+
+---
+
+## 🔄 **Git Workflow**
+
+### Struktura branchy
+- **`working`** - Branch rozwojowy/testowy (WORKING ENVIRONMENT)
+- **`main`** - Branch produkcyjny (PRODUCTION)
+
+### Praca rozwojowa (codzienne zmiany)
+```bash
+git checkout working
+git pull origin working
+# ... zmiany, testy, commit ...
+git push origin working
+```
+➡️ **Automatyczny deploy na Vercel** (wersja testowa)
+
+### Deploy do produkcji
+```bash
+git checkout main
+git pull origin main
+git merge working
+git push origin main
+```
+➡️ **Automatyczny deploy na Vercel** (wersja produkcyjna)
+
+### URL-e Vercel
+- **Production**: https://bakingschedule.vercel.app (z `main`)
+- **Preview**: https://bakingschedule-git-working.vercel.app (z `working`)
+
+### Ważne zasady
+1. **Nigdy nie commituj bezpośrednio do `main`** - zawsze pracuj na `working`
+2. **Testuj wszystko na `working`** przed merge do `main`
+3. **`main` zawsze musi być stabilny**
+
+---
+
+## 🚀 **Deployment**
+
+### Szybkie wdrożenie
+```bash
+cd Bakingschedule
+npm run build
+git add .
+git commit -m "Opis zmian"
+git push origin working  # lub main dla produkcji
+```
+
+### Sprawdzanie statusu
+1. Otwórz: https://vercel.com/dashboard
+2. Znajdź projekt "bakingschedule"
+3. Zobacz status wdrożenia (Building → Ready)
+
+### Najczęstsze problemy
+- **Vercel nie aktualizuje strony**: Sprawdź `git status`, odśwież z Cmd+Shift+R
+- **Build fails**: Sprawdź logi na Vercel dashboard
+
+---
+
+## 📚 **Dokumentacja techniczna**
+
+Szczegółowa specyfikacja algorytmu znajduje się w pliku **[Baking algorithm.md](Baking%20algorithm.md)**.
+
+Historia wersji w **[CHANGELOG.md](CHANGELOG.md)**.
+
