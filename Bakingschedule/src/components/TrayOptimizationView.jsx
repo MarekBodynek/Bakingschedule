@@ -207,17 +207,21 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
     // Jednorodne tace (1 produkt) są łatwiejsze do obsługi przez pracowników
     Object.values(traysByProgram).forEach(trays => {
       trays.sort((a, b) => {
-        // Najpierw według priorytetu (malejąco)
-        if (b.priority !== a.priority) return b.priority - a.priority;
-        // Potem jednorodne przed mieszanymi
         const aHomogeneous = a.products.length === 1;
         const bHomogeneous = b.products.length === 1;
+
+        // 1. Najpierw jednorodne przed mieszanymi
         if (aHomogeneous !== bHomogeneous) return bHomogeneous - aHomogeneous;
-        // Na końcu grupuj jednorodne tace tego samego produktu razem
+
+        // 2. W ramach jednorodnych: grupuj ten sam produkt razem, potem według priorytetu
         if (aHomogeneous && bHomogeneous) {
-          return a.products[0].product.sku.localeCompare(b.products[0].product.sku);
+          const skuCompare = a.products[0].product.sku.localeCompare(b.products[0].product.sku);
+          if (skuCompare !== 0) return skuCompare;
+          return b.priority - a.priority;
         }
-        return 0;
+
+        // 3. W ramach mieszanych: według priorytetu
+        return b.priority - a.priority;
       });
     });
 
