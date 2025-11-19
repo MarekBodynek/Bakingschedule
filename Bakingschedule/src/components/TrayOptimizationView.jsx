@@ -113,9 +113,18 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
         const maxCapacity = programItems[0]?.product.unitsPerTray || 10;
 
         programItems.forEach(item => {
-          let qtyToPack = phase === 'firstHour'
-            ? Math.min(item.firstHourStock, item.remainingQty)
-            : item.remainingQty;
+          // Określ ilość do spakowania w zależności od fazy
+          let qtyToPack;
+          if (phase === 'opening') {
+            // Faza 1a: tylko 1 taca na produkt (minimum na otwarcie)
+            qtyToPack = Math.min(item.remainingQty, item.product.unitsPerTray);
+          } else if (phase === 'firstHour') {
+            // Faza 1b: dodatkowe ~20% na pierwszą godzinę
+            qtyToPack = Math.min(item.firstHourStock, item.remainingQty);
+          } else {
+            // Faza 2 i 3: wszystko pozostałe
+            qtyToPack = item.remainingQty;
+          }
 
           while (qtyToPack > 0) {
             // Utwórz nową tacę jeśli nie ma lub jest pełna
