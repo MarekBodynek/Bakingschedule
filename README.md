@@ -537,7 +537,7 @@ git push origin main
 
 ### URL-e Vercel
 - **Production**: https://bakingschedule.vercel.app (z `main`)
-- **Preview**: https://bakingschedule-git-working.vercel.app (z `working`)
+- **Preview**: https://bakingscheduleworking.vercel.app (z `working`)
 
 ### Ważne zasady
 1. **Nigdy nie commituj bezpośrednio do `main`** - zawsze pracuj na `working`
