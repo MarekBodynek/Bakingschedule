@@ -1,6 +1,6 @@
 import XLSX from 'xlsx';
 
-const wb = XLSX.readFile('/Users/marekbodynek/Downloads/Bake of/Bake Of Gorica/SLIVNICA bakeoff-box plate program.xlsx');
+const wb = XLSX.readFile('/Users/marekbodynek/Downloads/Bake of/Bake Of Gorica/Test/Gorica Pri Slivnici Configuration.xlsx');
 const ws = wb.Sheets[wb.SheetNames[0]];
 const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
@@ -30,10 +30,10 @@ const detectedProgramDurations = {};
 for (let i = 0; i < jsonData.length; i++) {
   const row = jsonData[i];
 
-  // Parse oven configuration from columns 6-7
-  if (i >= 4) {
-    const ovenNumber = parseInt(row[6]);
-    const ovenTrays = parseInt(row[7]);
+  // Parse oven configuration from columns 5-6 (F-G)
+  if (i >= 2 && i <= 10) {
+    const ovenNumber = parseInt(row[5]);
+    const ovenTrays = parseInt(row[6]);
     if (ovenNumber && ovenTrays && !isNaN(ovenNumber) && !isNaN(ovenTrays)) {
       if (!ovenCapacities[ovenNumber - 1]) {
         ovenCapacities[ovenNumber - 1] = ovenTrays;
@@ -42,10 +42,10 @@ for (let i = 0; i < jsonData.length; i++) {
     }
   }
 
-  // Parse program durations from columns 9-10
-  if (i >= 4) {
-    const programName = String(row[9] || '').trim();
-    const duration = parseInt(row[10]);
+  // Parse program durations from columns 8-9 (I-J)
+  if (i >= 2) {
+    const programName = String(row[8] || '').trim();
+    const duration = parseInt(row[9]);
     if (programName && duration && !isNaN(duration)) {
       const programMatch = programName.match(/program\s*(\d+)/i);
       if (programMatch) {
