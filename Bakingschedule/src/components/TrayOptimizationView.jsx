@@ -49,11 +49,16 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
         }
       }
 
-      // Priorytet bazowany na sprzedaży w danej fali
+      // ✨ UPDATED: Priority formula per documentation
+      // priority = sales_velocity * 100 + stockout_count * 50 + is_key * 1000
+      // Using quantity as proxy for sales_velocity
       let priority = 0;
-      priority += product.isKeyProduct ? 10000 : 0;
-      priority += planData.quantity * 100;
-      priority += (planData.historical || 0) * 10;
+      const salesVelocity = planData.historical || planData.quantity; // Use historical as better proxy for velocity
+      const stockoutCount = planData.stockoutCount || 0; // Get from plan data if available
+
+      priority += product.isKeyProduct ? 1000 : 0;  // Key product bonus
+      priority += salesVelocity * 100;               // Sales velocity factor
+      priority += stockoutCount * 50;                // Stockout penalty (higher priority for products that run out)
 
       return {
         sku: product.sku,

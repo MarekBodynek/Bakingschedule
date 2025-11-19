@@ -863,77 +863,173 @@ const BakeryPlanningSystem = () => {
     console.log('🌐 Language changed to:', newLang);
   };
 
+  // ✨ Helper: Identify fast-moving products (not TOP 5, but high sales velocity)
+  const isFastMover = (sku) => {
+    const productSales = salesData2025.filter(s => s.eanCode === sku);
+    if (productSales.length === 0) return false;
+
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+
+    const recentSales = productSales.filter(s => s.date >= fourWeeksAgo);
+    const totalSales = _.sumBy(recentSales, 'quantity');
+
+    // Fast mover if average daily sales > 10
+    return totalSales / 28 > 10;
+  };
+
+  // ✨ Helper: Calculate sales velocity for a product
+  const getSalesVelocity = (sku) => {
+    const productSales = salesData2025.filter(s => s.eanCode === sku);
+    if (productSales.length === 0) return 0;
+
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+
+    const recentSales = productSales.filter(s => s.date >= fourWeeksAgo);
+    return _.sumBy(recentSales, 'quantity') / 28;
+  };
+
+  // ✨ UPDATED: Buffer calculation per product type according to documentation
   const calculateDynamicBuffer = (sku, targetDate, waveHours) => {
     const productSales = salesData2025.filter(s => s.eanCode === sku);
+    const product = products.find(p => p.sku === sku);
+
     if (productSales.length === 0) return { buffer: 0.15, reason: 'Ni podatkov, privzeta rezerva' };
-    
+
     if (isHighSalesDay(targetDate)) {
       return { buffer: 0, reason: 'Zgodovinski podatki vključujejo povpraševanje' };
     }
-    
+
     const fourWeeksAgo = new Date(targetDate);
     fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-    
-    const recentDays = productSales.filter(s => 
+
+    const recentDays = productSales.filter(s =>
       s.date >= fourWeeksAgo && waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
     );
-    
-    if (recentDays.length < 10) {
-      return { buffer: 0.15, reason: 'Omejeni podatki, privzeta rezerva' };
+
+    // ✨ NEW: Base buffer by product type (per documentation)
+    let baseRezerva;
+    let bufferComponents = [];
+
+    if (product?.isKeyProduct) {
+      baseRezerva = 0.25; // 25% for key products (bestsellers)
+      bufferComponents.push('Ključni izdelek: 25%');
+    } else if (isFastMover(sku)) {
+      baseRezerva = 0.15; // 15% for fast movers
+      bufferComponents.push('Hitra rotacija: 15%');
+    } else {
+      baseRezerva = 0.08; // 8% for slow movers
+      bufferComponents.push('Počasna rotacija: 8%');
     }
-    
-    const byDate = _.groupBy(recentDays, 'dateStr');
-    const dailyData = Object.entries(byDate).map(([date, sales]) => ({
-      date,
-      total: _.sumBy(sales, 'quantity'),
-      isWeekend: new Date(date).getDay() === 0 || new Date(date).getDay() === 6
-    }));
-    
-    const weekdayDays = dailyData.filter(d => !d.isWeekend);
-    if (weekdayDays.length < 3) {
-      return { buffer: 0.15, reason: 'Nezadostni podatki za delovne dni' };
-    }
-    
-    const weekdayAvg = _.meanBy(weekdayDays, 'total');
-    const weekdayStdDev = Math.sqrt(_.meanBy(weekdayDays, d => Math.pow(d.total - weekdayAvg, 2)));
-    const weekdayCV = weekdayStdDev / weekdayAvg;
-    
-    let baseRezerva = Math.min(0.35, Math.max(0.05, weekdayCV * 0.8));
-    let bufferComponents = [`Na podlagi CV: ${(baseRezerva * 100).toFixed(0)}%`];
-    
+
+    // Weekend adjustment
     const dayOfWeek = new Date(targetDate).getDay();
     const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-    const weekendDays = dailyData.filter(d => d.isWeekend);
-    
-    if (isWeekend && weekendDays.length >= 2) {
-      const weekendAvg = _.meanBy(weekendDays, 'total');
-      const weekendIncrease = (weekendAvg - weekdayAvg) / weekdayAvg;
-      const weekendBonus = Math.max(0, Math.min(0.15, weekendIncrease));
-      if (weekendBonus > 0.01) {
-        baseRezerva += weekendBonus;
-        bufferComponents.push(`Vikend: +${(weekendBonus * 100).toFixed(0)}%`);
+
+    if (isWeekend && recentDays.length >= 10) {
+      const byDate = _.groupBy(recentDays, 'dateStr');
+      const dailyData = Object.entries(byDate).map(([date, sales]) => ({
+        date,
+        total: _.sumBy(sales, 'quantity'),
+        isWeekend: new Date(date).getDay() === 0 || new Date(date).getDay() === 6
+      }));
+
+      const weekdayDays = dailyData.filter(d => !d.isWeekend);
+      const weekendDays = dailyData.filter(d => d.isWeekend);
+
+      if (weekdayDays.length >= 2 && weekendDays.length >= 2) {
+        const weekdayAvg = _.meanBy(weekdayDays, 'total');
+        const weekendAvg = _.meanBy(weekendDays, 'total');
+        const weekendIncrease = (weekendAvg - weekdayAvg) / Math.max(1, weekdayAvg);
+        const weekendBonus = Math.max(0, Math.min(0.15, weekendIncrease));
+        if (weekendBonus > 0.01) {
+          baseRezerva += weekendBonus;
+          bufferComponents.push(`Vikend: +${(weekendBonus * 100).toFixed(0)}%`);
+        }
       }
     }
-    
-    const productWaste = wasteData.filter(w => 
+
+    // Waste adjustment
+    const productWaste = wasteData.filter(w =>
       w.eanCode === sku && w.date >= fourWeeksAgo && !isHighSalesDay(w.dateStr)
     );
-    
-    if (productWaste.length > 5) {
+
+    if (productWaste.length > 5 && recentDays.length > 0) {
       const avgWaste = _.meanBy(productWaste, 'wasteQuantity');
-      const wasteRatio = avgWaste / Math.max(1, weekdayAvg);
-      
+      const byDate = _.groupBy(recentDays, 'dateStr');
+      const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+      const avgSales = _.mean(dailyTotals) || 1;
+      const wasteRatio = avgWaste / avgSales;
+
       if (wasteRatio > 0.08) {
         const reduction = Math.min(baseRezerva * 0.6, wasteRatio * 0.5);
         baseRezerva = Math.max(0, baseRezerva - reduction);
         bufferComponents.push(`Odpadki: -${(reduction * 100).toFixed(0)}%`);
       }
     }
-    
-    return { 
+
+    // Stockout adjustment (increase buffer if frequent stockouts)
+    const recentStockouts = detectedStockouts.filter(s =>
+      s.sku === sku &&
+      new Date(s.date) >= fourWeeksAgo
+    );
+
+    if (recentStockouts.length >= 2) {
+      const stockoutBonus = Math.min(0.10, recentStockouts.length * 0.03);
+      baseRezerva += stockoutBonus;
+      bufferComponents.push(`Stockout: +${(stockoutBonus * 100).toFixed(0)}%`);
+    }
+
+    return {
       buffer: Math.round(baseRezerva * 100) / 100,
       reason: bufferComponents.join(', ')
     };
+  };
+
+  // ✨ NEW: Check if product is new (less than 4 weeks of data)
+  const isNewProduct = (sku) => {
+    const productSales = salesData2025.filter(s => s.eanCode === sku);
+    if (productSales.length === 0) return true;
+
+    const dates = productSales.map(s => s.date);
+    const minDate = new Date(Math.min(...dates));
+    const now = new Date();
+    const daysSinceLaunch = Math.ceil((now - minDate) / (1000 * 60 * 60 * 24));
+
+    return daysSinceLaunch < 28;
+  };
+
+  // ✨ NEW: Get weeks since product launch
+  const getWeeksSinceLaunch = (sku) => {
+    const productSales = salesData2025.filter(s => s.eanCode === sku);
+    if (productSales.length === 0) return 0;
+
+    const dates = productSales.map(s => s.date);
+    const minDate = new Date(Math.min(...dates));
+    const now = new Date();
+    return Math.floor((now - minDate) / (1000 * 60 * 60 * 24 * 7));
+  };
+
+  // ✨ NEW: Find similar product for new product fallback
+  const findSimilarProduct = (sku, productName) => {
+    // Simple heuristic: find product with similar name or same category
+    const product = products.find(p => p.sku === sku);
+    if (!product) return null;
+
+    // Find other products with highest sales (as fallback)
+    const salesBySku = {};
+    salesData2025.forEach(s => {
+      if (s.eanCode !== sku) {
+        salesBySku[s.eanCode] = (salesBySku[s.eanCode] || 0) + s.quantity;
+      }
+    });
+
+    const sortedProducts = Object.entries(salesBySku)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 5);
+
+    return sortedProducts.length > 0 ? sortedProducts[0][0] : null;
   };
 
   const calculateHistoricalAverage = (sku, targetDate, waveHours) => {
@@ -941,19 +1037,101 @@ const BakeryPlanningSystem = () => {
     const productSales2025 = salesData2025.filter(s => s.eanCode === sku);
     const productSales2024 = salesData2024.filter(s => s.eanCode === sku);
 
-    // ✨ UŻYJ ML WEIGHTS zamiast hardcoded
+    // ✨ USE ML WEIGHTS instead of hardcoded
+    const mlWeights = getMLWeights(sku);
+
+    // ✨ NEW PRODUCT HANDLING
+    const weeksSinceLaunch = getWeeksSinceLaunch(sku);
+    if (weeksSinceLaunch < 4 && productSales2025.length < 10) {
+      const similarSku = findSimilarProduct(sku, products.find(p => p.sku === sku)?.name);
+      if (similarSku) {
+        const similarAvg = calculateHistoricalAverageInternal(similarSku, targetDate, waveHours);
+
+        if (weeksSinceLaunch < 2) {
+          // First 2 weeks: use similar product × 50%
+          console.log(`📦 New product ${sku} (${weeksSinceLaunch}w): using 50% of similar product`);
+          return similarAvg * 0.5;
+        } else {
+          // Weeks 3-4: blend own (60%) + similar (40%)
+          const ownAvg = productSales2025.length > 0
+            ? calculateHistoricalAverageInternal(sku, targetDate, waveHours)
+            : 0;
+          console.log(`📦 New product ${sku} (${weeksSinceLaunch}w): blending 60% own + 40% similar`);
+          return ownAvg * 0.6 + similarAvg * 0.4;
+        }
+      }
+    }
+
+    return calculateHistoricalAverageInternal(sku, targetDate, waveHours);
+  };
+
+  // Internal function with actual calculation logic
+  const calculateHistoricalAverageInternal = (sku, targetDate, waveHours) => {
+    const targetDayOfWeek = new Date(targetDate).getDay();
+    const productSales2025 = salesData2025.filter(s => s.eanCode === sku);
+    const productSales2024 = salesData2024.filter(s => s.eanCode === sku);
+
+    // ✨ USE ML WEIGHTS
     const mlWeights = getMLWeights(sku);
 
     let weights = [];
+    const isHolidayDay = isHoliday(targetDate);
     const isHighSales = isHighSalesDay(targetDate);
-    
-    if (isHighSales) {
+
+    // ✨ IMPROVED HOLIDAY HANDLING: Increase year_over_year to 70%
+    if (isHolidayDay) {
+      // For holidays, prioritize same holiday last year (70% weight)
+      const lastYear = new Date(targetDate);
+      lastYear.setFullYear(lastYear.getFullYear() - 1);
+      const weekBefore = new Date(lastYear); weekBefore.setDate(weekBefore.getDate() - 3);
+      const weekAfter = new Date(lastYear); weekAfter.setDate(weekAfter.getDate() + 3);
+
+      const yearAgoSales = productSales2024.filter(s =>
+        s.date >= weekBefore && s.date <= weekAfter
+      );
+
+      if (yearAgoSales.length > 0) {
+        const avgYearAgo = _.meanBy(yearAgoSales, 'quantity');
+        weights.push({ value: avgYearAgo * (waveHours.length / 13), weight: 0.70 });
+        console.log(`🎄 Holiday ${targetDate}: using 70% year-over-year for ${sku}`);
+      }
+
+      // Reduced weights for other sources during holidays
+      const fourWeeksAgo = new Date(targetDate);
+      fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+      const recentSales = productSales2025.filter(s =>
+        s.dayOfWeek === targetDayOfWeek && s.date >= fourWeeksAgo &&
+        waveHours.includes(s.hour)
+      );
+
+      if (recentSales.length > 0) {
+        const byDate = _.groupBy(recentSales, 'dateStr');
+        const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+        const avgPerDay = _.mean(dailyTotals);
+        weights.push({ value: avgPerDay, weight: 0.20 });
+      }
+
+      // Last week average with reduced weight
+      if (productSales2025.length > 0) {
+        const lastWeek = new Date(targetDate);
+        lastWeek.setDate(lastWeek.getDate() - 7);
+        const lastWeekSales = productSales2025.filter(s =>
+          s.date >= lastWeek && waveHours.includes(s.hour)
+        );
+        if (lastWeekSales.length > 0) {
+          const avgLastWeek = _.sumBy(lastWeekSales, 'quantity') / 7;
+          weights.push({ value: avgLastWeek, weight: 0.10 });
+        }
+      }
+    }
+    // Pre-holiday or pension day handling
+    else if (isHighSales) {
       const isPreHol = isPreHoliday(targetDate);
       const isPension = isPensionPaymentDay(targetDate);
-      
+
       let similarDays2025 = [];
       let similarDays2024 = [];
-      
+
       if (isPreHol) {
         const allPreHolidayDays = [];
         for (let i = -365; i < 0; i++) {
@@ -962,8 +1140,8 @@ const BakeryPlanningSystem = () => {
           const dateStr = checkDate.toISOString().split('T')[0];
           if (isPreHoliday(dateStr)) allPreHolidayDays.push(dateStr);
         }
-        
-        similarDays2025 = productSales2025.filter(s => 
+
+        similarDays2025 = productSales2025.filter(s =>
           allPreHolidayDays.includes(s.dateStr) && waveHours.includes(s.hour)
         );
         similarDays2024 = productSales2024.filter(s => allPreHolidayDays.includes(s.dateStr));
@@ -972,22 +1150,20 @@ const BakeryPlanningSystem = () => {
         for (let month = 0; month < 12; month++) {
           for (let yearOffset = 0; yearOffset <= 1; yearOffset++) {
             const year = new Date(targetDate).getFullYear() - yearOffset;
-            // Ostatni dzień miesiąca
             const lastDay = new Date(year, month + 1, 0).getDate();
             const checkDate = new Date(year, month, lastDay);
             const dateStr = formatDateLocal(checkDate);
             if (isPensionPaymentDay(dateStr)) allPensionDays.push(dateStr);
           }
         }
-        
-        similarDays2025 = productSales2025.filter(s => 
+
+        similarDays2025 = productSales2025.filter(s =>
           allPensionDays.includes(s.dateStr) && waveHours.includes(s.hour)
         );
         similarDays2024 = productSales2024.filter(s => allPensionDays.includes(s.dateStr));
       }
-      
+
       if (similarDays2025.length > 0) {
-        // 🔥 POPRAWKA: Dziel przez liczbę podobnych dni które wystąpiły
         const totalQuantity = _.sumBy(similarDays2025, 'quantity');
         const uniqueDates = [...new Set(similarDays2025.map(s => s.dateStr))];
         const avgPerDay = totalQuantity / Math.max(1, uniqueDates.length);
@@ -998,72 +1174,90 @@ const BakeryPlanningSystem = () => {
         weights.push({ value: adjustedForWave, weight: 0.45 });
       }
     }
-    
-    if (productSales2025.length > 0) {
+
+    // Normal day: use ML weights
+    if (weights.length === 0) {
       const fourWeeksAgo = new Date(targetDate);
       fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-      const recentSales = productSales2025.filter(s => 
-        s.dayOfWeek === targetDayOfWeek && s.date >= fourWeeksAgo && 
+      const eightWeeksAgo = new Date(targetDate);
+      eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+
+      // Same weekday 4 weeks ago (using ML weight)
+      const recentSales4w = productSales2025.filter(s =>
+        s.dayOfWeek === targetDayOfWeek && s.date >= fourWeeksAgo &&
         waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
       );
-      
-      if (recentSales.length > 0) {
-        // 🔥 POPRAWNA LOGIKA: Zawsze dziel przez liczbę wystąpień tego dnia tygodnia
-        // W okresie 4 tygodni = 4 wystąpienia (np. 4 środy)
-        const byDate = _.groupBy(recentSales, 'dateStr');
+
+      if (recentSales4w.length > 0) {
+        const byDate = _.groupBy(recentSales4w, 'dateStr');
         const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
-        const totalQuantity = _.sumBy(dailyTotals);
-        
-        // W okresie 28 dni (4 tygodnie) każdy dzień tygodnia występuje dokładnie 4 razy
-        const targetDaysInPeriod = 4;
-        
-        const avgPerTargetDay = totalQuantity / targetDaysInPeriod;
-        weights.push({ value: avgPerTargetDay, weight: weights.length > 0 ? 0.30 : 0.35 });
+        const avgPerDay = _.mean(dailyTotals);
+        weights.push({ value: avgPerDay, weight: mlWeights.same_weekday_4w });
       }
-    }
-    
-    if (productSales2024.length > 0) {
+
+      // Same weekday 8 weeks ago (using ML weight)
+      const recentSales8w = productSales2025.filter(s =>
+        s.dayOfWeek === targetDayOfWeek && s.date >= eightWeeksAgo && s.date < fourWeeksAgo &&
+        waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
+      );
+
+      if (recentSales8w.length > 0) {
+        const byDate = _.groupBy(recentSales8w, 'dateStr');
+        const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+        const avgPerDay = _.mean(dailyTotals);
+        weights.push({ value: avgPerDay, weight: mlWeights.same_weekday_8w });
+      }
+
+      // Last week average (using ML weight)
+      const lastWeek = new Date(targetDate);
+      lastWeek.setDate(lastWeek.getDate() - 7);
+      const lastWeekSales = productSales2025.filter(s =>
+        s.date >= lastWeek && waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr)
+      );
+
+      if (lastWeekSales.length > 0) {
+        const totalQuantity = _.sumBy(lastWeekSales, 'quantity');
+        const avgPerDay = totalQuantity / 7;
+        weights.push({ value: avgPerDay, weight: mlWeights.last_week_avg });
+      }
+
+      // Year-over-year (using ML weight)
       const lastYear = new Date(targetDate);
       lastYear.setFullYear(lastYear.getFullYear() - 1);
       const weekBefore = new Date(lastYear); weekBefore.setDate(weekBefore.getDate() - 7);
       const weekAfter = new Date(lastYear); weekAfter.setDate(weekAfter.getDate() + 7);
-      
-      const yearAgoSales = productSales2024.filter(s => 
+
+      const yearAgoSales = productSales2024.filter(s =>
         s.date >= weekBefore && s.date <= weekAfter && s.dayOfWeek === targetDayOfWeek
       );
-      
+
       if (yearAgoSales.length > 0) {
         const avgYearAgo = _.meanBy(yearAgoSales, 'quantity');
-        weights.push({ value: avgYearAgo * (waveHours.length / 13), weight: 0.20 });
+        weights.push({ value: avgYearAgo * (waveHours.length / 13), weight: mlWeights.year_over_year });
       }
     }
-    
+
+    // Fallback: use all available data
     if (productSales2025.length > 0 && weights.length < 2) {
       const allHourSales = productSales2025.filter(s => waveHours.includes(s.hour) && !isHighSalesDay(s.dateStr));
       if (allHourSales.length > 0) {
-        // 🔥 POPRAWKA: Użyj rzeczywistej liczby dni w zakresie danych
         const totalQuantity = _.sumBy(allHourSales, 'quantity');
-        const uniqueDates = [...new Set(allHourSales.map(s => s.dateStr))];
-        
-        // Oblicz zakres dat
         const allDates = allHourSales.map(s => s.date);
         const minDate = new Date(Math.min(...allDates));
         const maxDate = new Date(Math.max(...allDates));
         const daysInRange = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
-        
-        // Dziel przez dni w zakresie (nie tylko dni ze sprzedażą)
         const avgPerDay = totalQuantity / Math.max(1, daysInRange);
         weights.push({ value: avgPerDay, weight: 0.20 });
       }
     }
-    
+
     if (weights.length === 0) return 0;
 
     const totalWeight = _.sumBy(weights, 'weight');
     const weightedSum = _.sumBy(weights, w => w.value * w.weight);
     let baseResult = weightedSum / totalWeight;
 
-    // ✨ STOCKOUT ADJUSTMENT: Zwiększ prognozę jeśli produkt miał braki
+    // ✨ STOCKOUT ADJUSTMENT: Increase forecast if product had stockouts
     const fourWeeksAgo = new Date(targetDate);
     fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
     const recentStockouts = detectedStockouts.filter(s =>
@@ -1142,9 +1336,157 @@ const BakeryPlanningSystem = () => {
     return floored;
   };
 
+  // ✨ NEW: Analyze Wave 1 performance for Wave 2 adjustment
+  // Returns adjustment factor: +35% (stockout), +15% (high sales), 0% (normal), -15% (slow)
+  const analyzeWave1Performance = (sku, wave1Plan, targetDate, waveHours1) => {
+    // This would ideally use actual sales data from the morning
+    // Since we don't have real-time data, we simulate based on historical patterns
+    const product = products.find(p => p.sku === sku);
+    const planned = wave1Plan?.quantity || 0;
+
+    if (planned === 0) {
+      return { adjustment: 1.0, reason: 'Ni načrta za Val 1' };
+    }
+
+    // Check for historical stockouts in Wave 1 hours
+    const fourWeeksAgo = new Date(targetDate);
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+
+    const wave1Stockouts = detectedStockouts.filter(s =>
+      s.sku === sku &&
+      new Date(s.date) >= fourWeeksAgo &&
+      s.hour && s.hour <= 12 // Stockout in morning hours
+    );
+
+    // Check historical deviation pattern
+    const productSales = salesData2025.filter(s =>
+      s.eanCode === sku &&
+      waveHours1.includes(s.hour) &&
+      new Date(s.dateStr) >= fourWeeksAgo
+    );
+
+    if (productSales.length === 0) {
+      return { adjustment: 1.0, reason: 'Ni zgodovinskih podatkov' };
+    }
+
+    // Calculate typical morning sales ratio
+    const byDate = _.groupBy(productSales, 'dateStr');
+    const dailyTotals = Object.values(byDate).map(day => _.sumBy(day, 'quantity'));
+    const avgMorningSales = _.mean(dailyTotals);
+    const historicalAvg = wave1Plan.historical || planned;
+
+    // Determine adjustment based on pattern
+    if (wave1Stockouts.length >= 2) {
+      // Frequent stockouts in morning → aggressive increase
+      return {
+        adjustment: 1.35,
+        reason: `Pogoste primanjkljaje (${wave1Stockouts.length}x) → +35%`
+      };
+    }
+
+    const deviation = (avgMorningSales - historicalAvg) / Math.max(1, historicalAvg);
+
+    if (deviation > 0.20) {
+      // Sales typically 20%+ higher → cautious increase
+      return {
+        adjustment: 1.15,
+        reason: `Visoka prodaja (+${(deviation * 100).toFixed(0)}%) → +15%`
+      };
+    } else if (deviation < -0.20) {
+      // Sales typically 20%+ lower → decrease
+      return {
+        adjustment: 0.85,
+        reason: `Nizka prodaja (${(deviation * 100).toFixed(0)}%) → -15%`
+      };
+    }
+
+    return { adjustment: 1.0, reason: 'Normalna prodaja → brez prilagoditve' };
+  };
+
+  // ✨ NEW: Calculate rate ratio for Wave 3 (ultra-conservative evening planning)
+  // Returns multiplier: 0 (very slow), 0.4 (slow), 0.8 (normal/fast)
+  const calculateRateRatio = (sku, targetDate, allWaveHours) => {
+    const product = products.find(p => p.sku === sku);
+
+    // Get historical sales pattern for full day vs evening
+    const fourWeeksAgo = new Date(targetDate);
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+    const targetDayOfWeek = new Date(targetDate).getDay();
+
+    const productSales = salesData2025.filter(s =>
+      s.eanCode === sku &&
+      s.dayOfWeek === targetDayOfWeek &&
+      new Date(s.dateStr) >= fourWeeksAgo &&
+      !isHighSalesDay(s.dateStr)
+    );
+
+    if (productSales.length === 0) {
+      return { ratio: 0.8, multiplier: 0.8, reason: 'Ni podatkov → privzeto 80%' };
+    }
+
+    // Calculate typical sales by time of day
+    const morningHours = allWaveHours[1] || [];
+    const middayHours = allWaveHours[2] || [];
+    const eveningHours = allWaveHours[3] || [];
+
+    const morningSales = productSales.filter(s => morningHours.includes(s.hour));
+    const middaySales = productSales.filter(s => middayHours.includes(s.hour));
+    const eveningSales = productSales.filter(s => eveningHours.includes(s.hour));
+
+    const totalSales = _.sumBy(productSales, 'quantity');
+    const beforeEveningSales = _.sumBy([...morningSales, ...middaySales], 'quantity');
+    const eveningOnlySales = _.sumBy(eveningSales, 'quantity');
+
+    // Calculate rate: how much of expected was sold before evening
+    const byDate = _.groupBy(productSales, 'dateStr');
+    const uniqueDays = Object.keys(byDate).length;
+
+    if (uniqueDays === 0 || totalSales === 0) {
+      return { ratio: 0.8, multiplier: 0.8, reason: 'Premalo podatkov → privzeto 80%' };
+    }
+
+    // Rate ratio = proportion of sales happening as expected
+    // Lower ratio means slower day
+    const avgTotalPerDay = totalSales / uniqueDays;
+    const avgBeforeEveningPerDay = beforeEveningSales / uniqueDays;
+
+    // Expected proportion before evening (based on typical patterns)
+    const expectedBeforeEvening = avgTotalPerDay * 0.85; // Expect 85% before evening
+    const rateRatio = avgBeforeEveningPerDay / Math.max(1, expectedBeforeEvening);
+
+    // Determine multiplier based on rate ratio
+    let multiplier, reason;
+    if (rateRatio < 0.5) {
+      // Very slow day → don't bake
+      multiplier = 0;
+      reason = `Zelo počasen dan (ratio ${(rateRatio * 100).toFixed(0)}%) → 0%`;
+    } else if (rateRatio < 0.8) {
+      // Slow day → minimal plan
+      multiplier = 0.4;
+      reason = `Počasen dan (ratio ${(rateRatio * 100).toFixed(0)}%) → 40%`;
+    } else {
+      // Normal/fast day → conservative plan
+      multiplier = 0.8;
+      reason = `Normalen/hiter dan (ratio ${(rateRatio * 100).toFixed(0)}%) → 80%`;
+    }
+
+    return { ratio: rateRatio, multiplier, reason };
+  };
+
+  // ✨ NEW: Get stockout count for a product (for tray priority)
+  const getStockoutCount = (sku) => {
+    const fourWeeksAgo = new Date();
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
+
+    return detectedStockouts.filter(s =>
+      s.sku === sku &&
+      new Date(s.date) >= fourWeeksAgo
+    ).length;
+  };
+
   const generatePlan = async (wave) => {
     if (!dataLoaded) return;
-    
+
     setIsGenerating(true);
     await new Promise(resolve => setTimeout(resolve, 500));
 
@@ -1202,10 +1544,25 @@ const BakeryPlanningSystem = () => {
           ? buffer3Data.buffer * 0.3 
           : -Math.abs(buffer3Data.buffer) * 0.8;
         
+        // ✨ NEW: Apply Wave 2 adjustment based on Wave 1 performance analysis
+        const wave2Analysis = analyzeWave1Performance(product.sku, { quantity: Math.round(hist1 * (1 + buffer1)), historical: hist1 }, selectedDate, waveHours[1]);
+
+        // ✨ NEW: Apply Wave 3 rate_ratio for ultra-conservative planning
+        const rateRatioData = calculateRateRatio(product.sku, selectedDate, waveHours);
+
         // Krok 3: Oblicz wartości z bufferami (niezaokrąglone)
         const value1 = hist1 * (1 + buffer1);
-        const value2 = hist2 * (1 + buffer2);
-        const value3 = hist3 * (1 + buffer3);
+        // Wave 2: Apply adjustment factor from analyzeWave1Performance
+        const value2 = hist2 * (1 + buffer2) * wave2Analysis.adjustment;
+        // Wave 3: Apply rate_ratio multiplier instead of simple buffer
+        let value3;
+        if (isHighSalesDay(selectedDate)) {
+          // For high sales days, use buffer approach
+          value3 = hist3 * (1 + buffer3);
+        } else {
+          // For normal days, use rate_ratio multiplier
+          value3 = hist3 * rateRatioData.multiplier;
+        }
         
         // Krok 4: Oblicz sumę dzienną
         const dailyTotal = value1 + value2 + value3;
@@ -1308,13 +1665,17 @@ const BakeryPlanningSystem = () => {
         const finalHist2 = product.isPackaged ? hist2 * product.packageQuantity : hist2;
         const finalHist3 = product.isPackaged ? hist3 * product.packageQuantity : hist3;
 
+        // ✨ Get stockout count for tray priority
+        const productStockoutCount = getStockoutCount(product.sku);
+
         newPlans[1][product.sku] = {
           quantity: finalQty1,
           originalQuantity: finalQty1, // Pierwotna wygenerowana wartość
           historical: Math.round(finalHist1),
           buffer: Math.round(buffer1 * 100),
           adjustmentReason: reason1 + packagingNote,
-          isPackaged: product.isPackaged
+          isPackaged: product.isPackaged,
+          stockoutCount: productStockoutCount // ✨ For tray priority
         };
 
         newPlans[2][product.sku] = {
@@ -1322,74 +1683,89 @@ const BakeryPlanningSystem = () => {
           originalQuantity: finalQty2, // Pierwotna wygenerowana wartość
           historical: Math.round(finalHist2),
           buffer: Math.round(buffer2 * 100),
-          adjustmentReason: reason2 + packagingNote,
-          isPackaged: product.isPackaged
+          adjustmentReason: reason2 + (wave2Analysis.adjustment !== 1.0 ? ` | ${wave2Analysis.reason}` : '') + packagingNote, // ✨ Show Wave 2 adjustment
+          isPackaged: product.isPackaged,
+          wave2Adjustment: wave2Analysis.adjustment,
+          stockoutCount: productStockoutCount // ✨ For tray priority
         };
 
         newPlans[3][product.sku] = {
           quantity: finalQty3,
           originalQuantity: finalQty3, // Pierwotna wygenerowana wartość
           historical: Math.round(finalHist3),
-          buffer: Math.round(buffer3 * 100),
-          adjustmentReason: reason3 + packagingNote,
-          isPackaged: product.isPackaged
+          buffer: isHighSalesDay(selectedDate) ? Math.round(buffer3 * 100) : Math.round((rateRatioData.multiplier - 1) * 100), // ✨ Show rate_ratio as buffer
+          adjustmentReason: reason3 + (!isHighSalesDay(selectedDate) ? ` | ${rateRatioData.reason}` : '') + packagingNote, // ✨ Show rate_ratio reason
+          isPackaged: product.isPackaged,
+          rateRatioMultiplier: rateRatioData.multiplier,
+          stockoutCount: productStockoutCount // ✨ For tray priority
         };
       });
       
     } else {
-      // Regeneracja pojedynczej fali - używamy starego algorytmu dla kompatybilności
+      // ✨ UPDATED: Regeneracja pojedynczej fali - używamy tego samego algorytmu co pełna generacja
       const w = wave;
       const newPlan = {};
-      
+
       products.forEach(product => {
         const hours = waveHours[w];
         const historicalAvg = calculateHistoricalAverage(product.sku, selectedDate, hours);
         const dynamicBuffer = calculateDynamicBuffer(product.sku, selectedDate, hours);
-        
+
         let quantity = 0, buffer = 0, adjustmentReason = '';
-        
+
         if (w === 1) {
           buffer = dynamicBuffer.buffer;
           adjustmentReason = dynamicBuffer.reason;
-          
+
           if (isHighSalesDay(selectedDate)) {
             if (isPreHoliday(selectedDate)) adjustmentReason = '🎄 Pred praznikom (zgodovinsko)';
             else adjustmentReason = '💰 Dan pokojnin (zgodovinsko)';
           }
-          
+
           quantity = Math.round(historicalAvg * (1 + buffer));
         } else if (w === 2) {
+          // ✨ NEW: Use analyzeWave1Performance for Wave 2
           buffer = dynamicBuffer.buffer * 0.7;
+          const wave1Plan = newPlans[1]?.[product.sku];
+          const wave2Analysis = analyzeWave1Performance(product.sku, wave1Plan, selectedDate, waveHours[1]);
+
+          quantity = Math.round(historicalAvg * (1 + buffer) * wave2Analysis.adjustment);
           adjustmentReason = `Opoldne: ${dynamicBuffer.reason}`;
-          
+
+          if (wave2Analysis.adjustment !== 1.0) {
+            adjustmentReason += ` | ${wave2Analysis.reason}`;
+          }
+
           if (isHighSalesDay(selectedDate)) {
             if (isPreHoliday(selectedDate)) adjustmentReason = '🎄 Pred praznikom opoldne';
             else adjustmentReason = '💰 Pokojnine opoldne';
           }
-          
-          quantity = Math.round(historicalAvg * (1 + buffer));
         } else {
+          // ✨ NEW: Use calculateRateRatio for Wave 3
+          const rateRatioData = calculateRateRatio(product.sku, selectedDate, waveHours);
+
           if (isHighSalesDay(selectedDate)) {
             buffer = dynamicBuffer.buffer * 0.3;
+            quantity = Math.round(historicalAvg * (1 + buffer));
             adjustmentReason = isPreHoliday(selectedDate) ? '🎄 Pred praznikom zvečer' : '💰 Pokojnine zvečer';
           } else {
-            buffer = -Math.abs(dynamicBuffer.buffer) * 0.8;
-            adjustmentReason = `Večerna zmanjšava: ${dynamicBuffer.reason}`;
+            // Use rate_ratio multiplier for normal days
+            quantity = Math.round(historicalAvg * rateRatioData.multiplier);
+            buffer = rateRatioData.multiplier - 1;
+            adjustmentReason = `Večerna zmanjšava: ${rateRatioData.reason}`;
           }
-          
-          quantity = Math.round(historicalAvg * (1 + buffer));
 
           // Dla kluczowych produktów - oblicz ilość z max 1-2 odpadu
           if (product.isKeyProduct) {
             const minForKeyProduct = Math.ceil(historicalAvg) + 2;
             if (quantity < minForKeyProduct) {
               quantity = minForKeyProduct;
-              buffer = ((minForKeyProduct / historicalAvg) - 1) * 100;
+              buffer = ((minForKeyProduct / historicalAvg) - 1);
               adjustmentReason = 'Ključni izdelek (max 2 odpada)';
             }
           }
         }
-        
+
         // Apply package multiplier for packaged products
         const baseQuantity = Math.max(0, quantity);
         const finalQuantity = product.isPackaged ? baseQuantity * product.packageQuantity : baseQuantity;
@@ -1398,13 +1774,15 @@ const BakeryPlanningSystem = () => {
 
         newPlan[product.sku] = {
           quantity: finalQuantity,
+          originalQuantity: finalQuantity,
           historical: Math.round(finalHistorical),
           buffer: Math.round(buffer * 100),
           adjustmentReason: adjustmentReason + packagingNote,
-          isPackaged: product.isPackaged
+          isPackaged: product.isPackaged,
+          stockoutCount: getStockoutCount(product.sku) // ✨ For tray priority
         };
       });
-      
+
       newPlans[w] = newPlan;
     }
     
