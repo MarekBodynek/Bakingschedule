@@ -1424,6 +1424,20 @@ const BakeryPlanningSystem = () => {
             </div>
           ) : (
             <>
+              {/* Instrukcje użytkowania */}
+              <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-bold text-blue-800 mb-2">📋 Navodila za uporabo:</h4>
+                <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                  <li>Naloži datoteke s prodajo (urna, dnevna, odpadki)</li>
+                  <li>Naloži konfiguracijsko datoteko (gumb ⚙️)</li>
+                  <li>Generiraj načrt peke za želeni datum</li>
+                  <li>Pojdi na zavihek "Optimizacija pladnjev"</li>
+                  <li><strong>Za tiskanje Val 1:</strong> Izberi Val 1 → Klikni "Natisni"</li>
+                  <li><strong>Za tiskanje Val 2:</strong> Izberi Val 2 → Klikni "Natisni"</li>
+                  <li><strong>Za tiskanje Val 3:</strong> Izberi Val 3 → Klikni "Natisni"</li>
+                </ol>
+              </div>
+
               <div onDrop={handleDrop} onDragOver={(e) => e.preventDefault()}
                 className="border-4 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-blue-400 transition-colors cursor-pointer bg-gray-50">
                 <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -1627,6 +1641,14 @@ const BakeryPlanningSystem = () => {
                 title={t?.resetTitle || 'Ponastavitev na začetno stanje'}
               >
                 {t?.reset || '🔄 Reset'}
+              </button>
+
+              <button
+                onClick={() => alert('📋 NAVODILA ZA TISKANJE:\n\n1. Generiraj načrt peke\n2. Pojdi na zavihek "Optimizacija pladnjev"\n3. Za Val 1: Izberi Val 1 → Klikni "Natisni"\n4. Za Val 2: Izberi Val 2 → Klikni "Natisni"\n5. Za Val 3: Izberi Val 3 → Klikni "Natisni"\n\nVsak val se tiska posebej!')}
+                className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded font-medium ml-2"
+                title="Navodila za uporabo"
+              >
+                ❓ Pomoč
               </button>
 
               {deferredPrompt && (
