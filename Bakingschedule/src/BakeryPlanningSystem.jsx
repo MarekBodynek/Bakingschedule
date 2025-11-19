@@ -70,6 +70,7 @@ const BakeryPlanningSystem = () => {
   const [showOvenConfig, setShowOvenConfig] = useState(false); // Modal konfiguracji pieców
   const [expandedWaves, setExpandedWaves] = useState({ 1: false, 2: false, 3: false }); // Rozwinięcie fal - domyślnie zwinięte
   const [showResetModal, setShowResetModal] = useState(false); // Modal potwierdzenia resetu
+  const [showHelpModal, setShowHelpModal] = useState(false); // Modal pomocy (klawisz H)
 
   // ✨ Wave Configuration - default values matching current hardcoded times
   const [waveConfig, setWaveConfig] = useState({
@@ -811,6 +812,21 @@ const BakeryPlanningSystem = () => {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
+  }, []);
+
+  // Skrót klawiszowy H dla pomocy
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Ignoruj jeśli użytkownik pisze w input/textarea
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+      if (e.key === 'h' || e.key === 'H') {
+        setShowHelpModal(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleInstallClick = () => {
@@ -1644,9 +1660,9 @@ const BakeryPlanningSystem = () => {
               </button>
 
               <button
-                onClick={() => alert('📋 NAVODILA ZA TISKANJE:\n\n1. Generiraj načrt peke\n2. Pojdi na zavihek "Optimizacija pladnjev"\n3. Za Val 1: Izberi Val 1 → Klikni "Natisni"\n4. Za Val 2: Izberi Val 2 → Klikni "Natisni"\n5. Za Val 3: Izberi Val 3 → Klikni "Natisni"\n\nVsak val se tiska posebej!')}
+                onClick={() => setShowHelpModal(true)}
                 className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded font-medium ml-2"
-                title="Navodila za uporabo"
+                title="Navodila za uporabo (ali pritisni H)"
               >
                 ❓ Pomoč
               </button>
@@ -2211,6 +2227,64 @@ const BakeryPlanningSystem = () => {
                 {t.reset || 'Ponastavi'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Help Modal - klawisz H lub przycisk */}
+      {showHelpModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          onClick={() => setShowHelpModal(false)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl p-6 max-w-lg mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-800">📋 Navodila za uporabo</h3>
+              <button
+                onClick={() => setShowHelpModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-2">🚀 Začetek dela:</h4>
+                <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                  <li>Naloži datoteke s prodajo (urna, dnevna, odpadki)</li>
+                  <li>Naloži konfiguracijsko datoteko (gumb ⚙️)</li>
+                  <li>Izberi datum in generiraj načrt peke</li>
+                </ol>
+              </div>
+
+              <div>
+                <h4 className="font-semibold text-gray-700 mb-2">🖨️ Tiskanje valov:</h4>
+                <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside">
+                  <li>Pojdi na zavihek "Optimizacija pladnjev"</li>
+                  <li><strong>Val 1:</strong> Izberi Val 1 → Klikni "Natisni"</li>
+                  <li><strong>Val 2:</strong> Izberi Val 2 → Klikni "Natisni"</li>
+                  <li><strong>Val 3:</strong> Izberi Val 3 → Klikni "Natisni"</li>
+                </ol>
+                <p className="text-xs text-blue-600 mt-2">💡 Vsak val se tiska posebej!</p>
+              </div>
+
+              <div className="bg-gray-100 rounded p-3">
+                <p className="text-xs text-gray-600">
+                  <strong>Bližnjica:</strong> Pritisni <kbd className="bg-gray-200 px-1 rounded">H</kbd> za prikaz/skritje te pomoči
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowHelpModal(false)}
+              className="w-full mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
+            >
+              Zapri
+            </button>
           </div>
         </div>
       )}
