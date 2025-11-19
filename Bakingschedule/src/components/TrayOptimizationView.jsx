@@ -172,6 +172,11 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
     allTrays.push(...openingTrays, ...firstHourTrays, ...keyProductTrays, ...regularTrays);
     allTrays.sort((a, b) => b.priority - a.priority);
 
+    // Przenumeruj tace sekwencyjnie po posortowaniu
+    allTrays.forEach((tray, index) => {
+      tray.id = index + 1;
+    });
+
     // Pogrupuj według programu (dla batchy)
     allTrays.forEach(tray => {
       const program = tray.program;
