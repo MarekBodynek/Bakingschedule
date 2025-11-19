@@ -51,7 +51,7 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
 
       // Priorytet bazowany na sprzedaży w danej fali
       let priority = 0;
-      priority += product.isKey ? 10000 : 0;
+      priority += product.isKeyProduct ? 10000 : 0;
       priority += planData.quantity * 100;
       priority += (planData.historical || 0) * 10;
 
@@ -59,7 +59,7 @@ const TrayOptimizationView = ({ products, wavePlan, waveNumber, translations }) 
         sku: product.sku,
         name: product.name,
         quantity: planData.quantity,
-        isKey: product.isKey,
+        isKey: product.isKeyProduct,
         bakingProgram,
         programName,
         bakingTime,
