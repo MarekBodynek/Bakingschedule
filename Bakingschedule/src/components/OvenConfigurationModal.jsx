@@ -671,7 +671,7 @@ const OvenConfigurationModal = ({
           {Object.keys(waveConfig).length > 0 && (
             <div className="space-y-4">
               <h3 className="text-lg font-semibold text-gray-800">
-                {translations?.openingHoursWaves || '4. Godziny otwarcia i fale'}
+                {translations?.openingHoursWaves || '4. Delovni čas in valovi'}
               </h3>
 
               <div className="overflow-x-auto">
