@@ -213,10 +213,12 @@ const OvenConfigurationModal = ({
           const name = String(row[1] || '').trim();
           const program = parseInt(row[2]);
           const unitsOnTray = parseInt(row[3]);
+          const keyProduct = String(row[4] || '').trim().toUpperCase();
+          const isKeyProduct = keyProduct === 'JA' || keyProduct === 'YES' || keyProduct === 'DA';
 
           // 🔍 DEBUG: Log each row being parsed
           if (i < 10) { // Log first few product rows
-            console.log(`🔍 Row ${i} - EAN: "${eanCode}", Name: "${name}", Program: ${program}, Units: ${unitsOnTray}`);
+            console.log(`🔍 Row ${i} - EAN: "${eanCode}", Name: "${name}", Program: ${program}, Units: ${unitsOnTray}, Key: ${isKeyProduct}`);
           }
 
           // Stop if we hit info rows (oven config, program durations, etc.)
@@ -236,7 +238,8 @@ const OvenConfigurationModal = ({
             sku: eanCode, // Użyj EAN jako SKU
             name: name,
             program: program,
-            unitsPerTray: unitsOnTray
+            unitsPerTray: unitsOnTray,
+            isKeyProduct: isKeyProduct
           });
 
           programs.add(program);

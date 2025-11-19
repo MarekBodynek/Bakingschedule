@@ -641,10 +641,13 @@ const BakeryPlanningSystem = () => {
         // 🔥 Automatyczne rozpoznawanie pakowania (np. 5x60, 3x80)
         const packagingInfo = parsePackagingInfo(productName);
 
+        // Get isKeyProduct from config file
+        const isKeyProduct = configProductMap[s.eanCode]?.isKeyProduct || false;
+
         uniqueProducts.push({
           sku: s.eanCode,
           name: productName,
-          isKey: ['3831002150359', '3831002150205'].includes(s.eanCode),
+          isKeyProduct: isKeyProduct,
           isPackaged: packagingInfo.isPackaged,
           packageQuantity: packagingInfo.quantity,
           packageWeight: packagingInfo.weight || 0,
@@ -1230,7 +1233,7 @@ const BakeryPlanningSystem = () => {
         }
         
         // Krok 6: Sprawdź minimum dla kluczowych produktów w wave 3
-        if (product.isKey && qty3 < 5) {
+        if (product.isKeyProduct && qty3 < 5) {
           const diff = 5 - qty3;
           qty3 = 5;
           dailyRounded += diff;
@@ -1265,7 +1268,7 @@ const BakeryPlanningSystem = () => {
           }
         }
         
-        if (product.isKey && qty3 === 5 && hist3 * (1 + buffer3) < 5) {
+        if (product.isKeyProduct && qty3 === 5 && hist3 * (1 + buffer3) < 5) {
           reason3 = 'Minimum ključnega izdelka (5 kos)';
         }
         
@@ -1347,7 +1350,7 @@ const BakeryPlanningSystem = () => {
           
           quantity = Math.round(historicalAvg * (1 + buffer));
           
-          if (product.isKey && quantity < 5) { 
+          if (product.isKeyProduct && quantity < 5) { 
             quantity = 5;
             buffer = ((5 / historicalAvg) - 1) * 100;
             adjustmentReason = 'Minimum ključnega izdelka (5 kos)';
@@ -1848,12 +1851,13 @@ const BakeryPlanningSystem = () => {
                   const hasManualCorrection = manualCorrectionTypes.includes(plan1.adjustmentReason);
 
                   return (
-                    <tr key={product.sku} className="border-b border-gray-200 hover:bg-gray-50">
-                      <td className="px-3 py-2 sticky left-0 bg-white">
+                    <tr key={product.sku} className={`border-b border-gray-200 hover:bg-gray-50 ${product.isKeyProduct ? 'bg-yellow-50' : ''}`}>
+                      <td className={`px-3 py-2 sticky left-0 ${product.isKeyProduct ? 'bg-yellow-50' : 'bg-white'}`}>
                         <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-800 text-sm">{product.name}</span>
-                            {product.isKey && <span className="text-xs bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded">{t.keyProduct}</span>}
+                            {product.isKeyProduct && <span className="text-yellow-500">⭐</span>}
+                            <span className={`font-medium text-sm ${product.isKeyProduct ? 'text-yellow-900' : 'text-gray-800'}`}>{product.name}</span>
+                            {product.isKeyProduct && <span className="text-xs bg-yellow-200 text-yellow-800 px-1 py-0.5 rounded font-semibold">{t.keyProduct || 'KEY'}</span>}
                             {product.isPackaged && <span className="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded font-bold">{product.packageQuantity}x {t.package}</span>}
                           </div>
                           {product.isPackaged && (
@@ -2097,21 +2101,26 @@ const BakeryPlanningSystem = () => {
         onSave={(config) => {
           console.log('⚙️ Oven configuration saved:', config);
 
-          // ✅ CRITICAL FIX: Rebuild products with config names after config is saved
+          // ✅ CRITICAL FIX: Rebuild products with config names and key product flag after config is saved
           if (config.productConfig && config.productConfig.length > 0 && products.length > 0) {
-            const configNameMap = {};
+            const configMap = {};
             config.productConfig.forEach(cp => {
-              configNameMap[cp.sku] = cp.name;
+              configMap[cp.sku] = {
+                name: cp.name,
+                isKeyProduct: cp.isKeyProduct || false
+              };
             });
 
-            // Update product names from config
+            // Update product names and key product flag from config
             const updatedProducts = products.map(p => ({
               ...p,
-              name: configNameMap[p.sku] || p.name
+              name: configMap[p.sku]?.name || p.name,
+              isKeyProduct: configMap[p.sku]?.isKeyProduct || false
             }));
 
             setProducts(updatedProducts);
-            console.log(`✅ Updated ${updatedProducts.filter(p => configNameMap[p.sku]).length} product names from config`);
+            const keyProductCount = updatedProducts.filter(p => p.isKeyProduct).length;
+            console.log(`✅ Updated ${updatedProducts.filter(p => configMap[p.sku]).length} product names from config (${keyProductCount} key products)`);
           }
 
           // ✅ Save wave configuration to state
