@@ -755,10 +755,6 @@ const OvenConfigurationModal = ({
                   </tbody>
                 </table>
               </div>
-
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700">
-                <strong>{translations?.bakingTimeNote || 'Opomba'}:</strong> {translations?.bakingTimeCalculation || 'Čas peke se izračuna samodejno (1 uro pred začetkom vala)'}
-              </div>
             </div>
           )}
 
