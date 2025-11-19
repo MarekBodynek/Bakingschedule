@@ -1232,11 +1232,14 @@ const BakeryPlanningSystem = () => {
           );
         }
         
-        // Krok 6: Sprawdź minimum dla kluczowych produktów w wave 3
-        if (product.isKeyProduct && qty3 < 5) {
-          const diff = 5 - qty3;
-          qty3 = 5;
-          dailyRounded += diff;
+        // Krok 6: Dla kluczowych produktów - oblicz ilość z max 1-2 odpadu
+        if (product.isKeyProduct) {
+          const minForKeyProduct = Math.ceil(hist3) + 2; // historyczna + max 2 odpadu
+          if (qty3 < minForKeyProduct) {
+            const diff = minForKeyProduct - qty3;
+            qty3 = minForKeyProduct;
+            dailyRounded += diff;
+          }
         }
         
         // Krok 7: Zastosuj mnożnik dla produktów pakowanych
@@ -1268,8 +1271,8 @@ const BakeryPlanningSystem = () => {
           }
         }
         
-        if (product.isKeyProduct && qty3 === 5 && hist3 * (1 + buffer3) < 5) {
-          reason3 = 'Minimum ključnega izdelka (5 kos)';
+        if (product.isKeyProduct && qty3 > hist3 * (1 + buffer3)) {
+          reason3 = `Ključni izdelek (max 2 odpada)`;
         }
         
         const packagingNote = product.isPackaged ? ` (Večpak ${product.packageQuantity}x - peka v kosih)` : '';
@@ -1349,11 +1352,15 @@ const BakeryPlanningSystem = () => {
           }
           
           quantity = Math.round(historicalAvg * (1 + buffer));
-          
-          if (product.isKeyProduct && quantity < 5) { 
-            quantity = 5;
-            buffer = ((5 / historicalAvg) - 1) * 100;
-            adjustmentReason = 'Minimum ključnega izdelka (5 kos)';
+
+          // Dla kluczowych produktów - oblicz ilość z max 1-2 odpadu
+          if (product.isKeyProduct) {
+            const minForKeyProduct = Math.ceil(historicalAvg) + 2;
+            if (quantity < minForKeyProduct) {
+              quantity = minForKeyProduct;
+              buffer = ((minForKeyProduct / historicalAvg) - 1) * 100;
+              adjustmentReason = 'Ključni izdelek (max 2 odpada)';
+            }
           }
         }
         
